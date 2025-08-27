@@ -115,115 +115,38 @@ export function PoolsTable({ loans, liquidations }: PoolsTableProps) {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+        <table className="min-w-full divide-y divide-border">
+          <thead className="bg-muted/50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Pool
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Outstanding Debt
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Borrowed (24h)
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Repaid (24h)
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Net (24h)
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Net Debt Trend (7d)
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Liquidations (7d)
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Liquidation Activity
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Default Rate
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Pool Rewards (7d)
-              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">POOL</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">OUTSTANDING DEBT</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">BORROWED (24H)</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">REPAID (24H)</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">NET (24H)</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">NET DEBT TREND (7D)</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">LIQUIDATIONS (7D)</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">LIQUIDATION ACTIVITY</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">DEFAULT RATE</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">POOL REWARDS (7D)</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-surface divide-y divide-border">
             {poolData.map((pool) => (
-              <tr key={pool.pool} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div className="text-sm font-medium text-blue-600">
-                      {pool.pool}
-                    </div>
-                  </div>
+              <tr key={pool.pool} className="hover:bg-muted transition-colors">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-fg">{pool.pool}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-fg">${(pool.outstandingDebt / 1000).toFixed(1)}K</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-fg">${(pool.borrowed24h / 1000).toFixed(1)}K</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-fg">${(pool.repaid24h / 1000).toFixed(1)}K</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-fg">+${(pool.net24h / 1000).toFixed(1)}K</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-fg">
+                  <div className="w-16 h-2 bg-brand-500 rounded-full"></div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-bold text-gray-900">
-                    {formatCurrency(pool.outstandingDebt)}
-                  </div>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-fg">{pool.liquidations7d}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-fg">
+                  <div className="w-16 h-2 bg-accent-500 rounded-full"></div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">
-                    {formatCurrency(pool.borrowed24h)}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">
-                    {formatCurrency(pool.repaid24h)}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className={`text-sm font-medium ${
-                    pool.net24h >= 0 ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {pool.net24h >= 0 ? '+' : ''}{formatCurrency(pool.net24h)}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="w-16 h-8">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={pool.sparklineData}>
-                        <Line 
-                          type="monotone" 
-                          dataKey="value" 
-                          stroke="#3b82f6" 
-                          strokeWidth={1.5}
-                          dot={false}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">
-                    {pool.liquidations7d}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="w-16 h-8">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={pool.liquidationData}>
-                        <Bar dataKey="value" fill="#ef4444" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className={`text-sm font-medium ${
-                    pool.defaultRate > 5 ? 'text-red-600' : 
-                    pool.defaultRate > 2 ? 'text-yellow-600' : 'text-green-600'
-                  }`}>
-                    {formatPercentage(pool.defaultRate)}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">
-                    {formatCurrency(pool.poolRewards7d)}
-                  </div>
-                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-success-500">{pool.defaultRate.toFixed(1)}%</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-fg">${(pool.poolRewards7d / 1000).toFixed(1)}K</td>
               </tr>
             ))}
           </tbody>

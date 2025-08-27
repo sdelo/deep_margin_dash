@@ -208,42 +208,22 @@ export function LiquidationsFeed({ liquidations, loans }: LiquidationsFeedProps)
       {/* Liquidations Table */}
       <div className="bg-white rounded-lg shadow border overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-border">
+            <thead className="bg-muted/50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Time
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Pool
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Manager
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Liquidation Amount
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Default Amount
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Recovery Rate
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Pool Reward
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Liquidator Reward
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  User Reward
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">TIME</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">POOL</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">MANAGER</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">LIQUIDATION AMOUNT</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">DEFAULT AMOUNT</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">RECOVERY RATE</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">POOL REWARD</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">LIQUIDATOR REWARD</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">USER REWARD</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">ACTIONS</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-surface divide-y divide-border">
               {filteredLiquidations.map((liquidation) => {
                 const defaultRatio = (liquidation.default_amount / liquidation.liquidation_amount) * 100
                 const recoveryRate = 100 - defaultRatio

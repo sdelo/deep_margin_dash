@@ -264,7 +264,7 @@ export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersEx
 
   const SortableHeader = ({ field, children }: { field: keyof BorrowerData; children: React.ReactNode }) => (
     <th 
-      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+      className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider cursor-pointer hover:bg-muted/50"
       onClick={() => handleSort(field)}
     >
       <div className="flex items-center gap-1">
@@ -292,15 +292,19 @@ export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersEx
       </div>
 
       {/* Search */}
-      <div className="bg-white p-4 rounded-lg shadow border">
-        <div className="max-w-md">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Search Borrowers</label>
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="flex-1">
           <input
             type="text"
-            placeholder="Search by owner, manager ID, or pool..."
+            placeholder="Search borrowers..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2 rounded-lg border border-border bg-surface text-fg placeholder:text-fg/50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+            style={{
+              backgroundColor: 'hsl(var(--surface))',
+              color: 'hsl(var(--fg))',
+              borderColor: 'hsl(var(--border))'
+            }}
           />
         </div>
       </div>
@@ -308,25 +312,20 @@ export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersEx
       {/* Borrowers Table */}
       <div className="bg-white rounded-lg shadow border overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-border">
+            <thead className="bg-muted/50">
               <tr>
-                <SortableHeader field="owner">Owner</SortableHeader>
-                <SortableHeader field="firstSeen">First Seen</SortableHeader>
-                <SortableHeader field="lastActivity">Last Activity</SortableHeader>
-                <SortableHeader field="poolsUsed">Pools Used</SortableHeader>
-                <SortableHeader field="totalOutstandingDebt">Outstanding Debt</SortableHeader>
-                <SortableHeader field="borrowCount">#Borrows</SortableHeader>
-                <SortableHeader field="repayCount">#Repays</SortableHeader>
-                <SortableHeader field="liquidationCount">#Liquidations</SortableHeader>
-                <SortableHeader field="defaultSum">Default Sum</SortableHeader>
-                <SortableHeader field="repayRatio">Repay Ratio</SortableHeader>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">BORROWER</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">POOL</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">LOAN AMOUNT</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">STATUS</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">BORROWED AT</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">REPAID AT</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">HEALTH FACTOR</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">ACTIONS</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-surface divide-y divide-border">
               {filteredAndSortedBorrowers.map((borrower) => {
                 const isExpanded = expandedBorrower === borrower.managerId
                 const daysSinceFirstSeen = (Date.now() - borrower.firstSeen) / (1000 * 60 * 60 * 24)
@@ -336,81 +335,40 @@ export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersEx
                   <>
                     <tr 
                       key={borrower.managerId} 
-                      className={`hover:bg-gray-50 cursor-pointer ${isExpanded ? 'bg-blue-50' : ''}`}
+                      className={`hover:bg-muted/50 cursor-pointer ${isExpanded ? 'bg-blue-50' : ''}`}
                       onClick={() => toggleBorrowerExpansion(borrower.managerId)}
                     >
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <div>
-                          <div className="font-medium text-gray-900">{borrower.owner.substring(0, 8)}...</div>
-                          <div className="text-gray-500 text-xs font-mono">{borrower.managerId.substring(0, 8)}...</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <div>
-                          <div>{new Date(borrower.firstSeen).toLocaleDateString()}</div>
-                          <div className="text-gray-500 text-xs">{daysSinceFirstSeen.toFixed(0)} days ago</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <div>
-                          <div>{new Date(borrower.lastActivity).toLocaleDateString()}</div>
-                          <div className="text-gray-500 text-xs">{daysSinceLastActivity.toFixed(0)} days ago</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <div className="flex flex-wrap gap-1">
-                          {borrower.poolsUsed.map(pool => (
-                            <span key={pool} className="inline-flex px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded">
-                              {pool}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <div>
-                          <div className="font-semibold text-gray-900">
-                            ${(borrower.totalOutstandingDebt / 1000).toFixed(1)}K
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {Object.entries(borrower.outstandingDebtByPool)
-                              .filter(([_, debt]) => debt > 0)
-                              .map(([pool, debt]) => `${pool}: $${(debt / 1000).toFixed(1)}K`)
-                              .join(', ')}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                        {borrower.borrowCount}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                        {borrower.repayCount}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <span className={`font-semibold ${
-                          borrower.liquidationCount > 0 ? 'text-red-600' : 'text-green-600'
-                        }`}>
-                          {borrower.liquidationCount}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-fg font-medium">{borrower.owner}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-fg">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-brand-500/20 text-brand-400 border border-brand-500/30">
+                          {borrower.poolsUsed.join(', ')}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <span className={`font-semibold ${
-                          borrower.defaultSum > 0 ? 'text-red-600' : 'text-green-600'
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-fg font-semibold">${(borrower.totalOutstandingDebt / 1000).toFixed(1)}K</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-fg">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          borrower.repayRatio > 0.8 ? 'bg-success-500/20 text-success-400 border border-success-500/30' :
+                          borrower.repayRatio > 0.5 ? 'bg-warning-500/20 text-warning-400 border border-warning-500/30' :
+                          'bg-destructive-500/20 text-destructive-400 border border-destructive-500/30'
                         }`}>
-                          ${(borrower.defaultSum / 1000).toFixed(1)}K
+                          {(borrower.repayRatio * 100).toFixed(1)}%
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          borrower.repayRatio >= 80 ? 'bg-green-100 text-green-800' :
-                          borrower.repayRatio >= 50 ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          {borrower.repayRatio.toFixed(1)}%
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <button className="text-blue-600 hover:text-blue-900">
-                          {isExpanded ? '−' : '+'}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-fg/90">{borrower.firstSeen}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-fg/90">{borrower.lastActivity}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-fg/90">{borrower.borrowCount}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-fg/90">{borrower.repayCount}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-fg/90">{borrower.liquidationCount}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-fg/90">${(borrower.defaultSum / 1000).toFixed(1)}K</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-fg/90">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            toggleBorrowerExpansion(borrower.managerId)
+                          }}
+                          className="text-brand-400 hover:text-brand-300 transition-colors"
+                        >
+                          {isExpanded ? 'Hide' : 'Show'} Details
                         </button>
                       </td>
                     </tr>
@@ -418,119 +376,25 @@ export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersEx
                     {/* Expanded Row Details */}
                     {isExpanded && (
                       <tr>
-                        <td colSpan={11} className="px-6 py-6 bg-gray-50">
-                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            {/* Event Timeline */}
+                        <td colSpan={12} className="px-6 py-4 bg-muted/30">
+                          <div className="space-y-4">
                             <div>
-                              <h4 className="text-lg font-semibold text-gray-900 mb-4">Event Timeline</h4>
-                              <div className="space-y-3 max-h-96 overflow-y-auto">
-                                {borrower.events.map((event, index) => (
-                                  <div key={index} className="flex items-start gap-3">
-                                    <div className={`flex-shrink-0 w-3 h-3 rounded-full mt-1 ${
-                                      event.type === 'created' ? 'bg-gray-400' :
-                                      event.type === 'borrow' ? 'bg-blue-500' :
-                                      event.type === 'repay' ? 'bg-green-500' :
-                                      'bg-red-500'
-                                    }`}></div>
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-2">
-                                        <span className={`text-sm font-medium ${
-                                          event.type === 'created' ? 'text-gray-700' :
-                                          event.type === 'borrow' ? 'text-blue-700' :
-                                          event.type === 'repay' ? 'text-green-700' :
-                                          'text-red-700'
-                                        }`}>
-                                          {event.type.charAt(0).toUpperCase() + event.type.slice(1)}
-                                        </span>
-                                        <span className="text-xs text-gray-500">
-                                          {new Date(event.timestamp).toLocaleString()}
-                                        </span>
-                                      </div>
-                                      {event.pool && (
-                                        <div className="text-sm text-gray-600">
-                                          Pool: {event.pool}
-                                        </div>
-                                      )}
-                                      {event.amount && (
-                                        <div className="text-sm text-gray-600">
-                                          Amount: ${(event.amount / 1000).toFixed(1)}K
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                ))}
+                              <h4 className="text-sm font-semibold text-fg mb-2">Event Timeline</h4>
+                              <div className="space-y-2">
+                                <div className="text-sm text-fg/90">
+                                  <span className="font-medium">First seen:</span> {new Date(borrower.firstSeen).toLocaleDateString()} ({daysSinceFirstSeen.toFixed(0)} days ago)
+                                </div>
+                                <div className="text-sm text-fg/90">
+                                  <span className="font-medium">Last activity:</span> {new Date(borrower.lastActivity).toLocaleDateString()} ({daysSinceLastActivity.toFixed(0)} days ago)
+                                </div>
                               </div>
                             </div>
-
-                            {/* Loan Duration Analysis */}
+                            
                             <div>
-                              <h4 className="text-lg font-semibold text-gray-900 mb-4">Loan Duration Analysis</h4>
-                              {(() => {
-                                const durations = calculateLoanDurations(borrower)
-                                
-                                if (durations.length === 0) {
-                                  return (
-                                    <div className="text-gray-500 text-sm">
-                                      No completed loan cycles yet
-                                    </div>
-                                  )
-                                }
-
-                                const avgDuration = durations.reduce((sum, d) => sum + d.duration, 0) / durations.length
-                                const durationsByPool = durations.reduce((acc, d) => {
-                                  if (!acc[d.pool]) acc[d.pool] = []
-                                  acc[d.pool].push(d.duration)
-                                  return acc
-                                }, {} as Record<string, number[]>)
-
-                                return (
-                                  <div className="space-y-4">
-                                    <div className="bg-white p-4 rounded border">
-                                      <div className="text-sm font-medium text-gray-700">Average Loan Duration</div>
-                                      <div className="text-2xl font-bold text-blue-600">
-                                        {avgDuration.toFixed(1)} days
-                                      </div>
-                                    </div>
-                                    
-                                    <div className="bg-white p-4 rounded border">
-                                      <div className="text-sm font-medium text-gray-700 mb-3">Duration by Pool</div>
-                                      <div className="space-y-2">
-                                        {Object.entries(durationsByPool).map(([pool, poolDurations]) => {
-                                          const avgPoolDuration = poolDurations.reduce((sum, d) => sum + d, 0) / poolDurations.length
-                                          return (
-                                            <div key={pool} className="flex justify-between items-center">
-                                              <span className="text-sm text-gray-600">{pool}</span>
-                                              <span className="text-sm font-medium">
-                                                {avgPoolDuration.toFixed(1)} days ({poolDurations.length} loans)
-                                              </span>
-                                            </div>
-                                          )
-                                        })}
-                                      </div>
-                                    </div>
-
-                                    {/* Duration Chart */}
-                                    <div className="bg-white p-4 rounded border">
-                                      <div className="text-sm font-medium text-gray-700 mb-3">Duration Trend</div>
-                                      <div className="h-32">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                          <LineChart data={durations.slice(-10).map((d, i) => ({ 
-                                            index: i + 1, 
-                                            duration: d.duration,
-                                            pool: d.pool 
-                                          }))}>
-                                            <CartesianGrid strokeDasharray="3 3" />
-                                            <XAxis dataKey="index" />
-                                            <YAxis />
-                                            <Tooltip formatter={(value) => [`${Number(value).toFixed(1)} days`, 'Duration']} />
-                                            <Line type="monotone" dataKey="duration" stroke="#3b82f6" strokeWidth={2} />
-                                          </LineChart>
-                                        </ResponsiveContainer>
-                                      </div>
-                                    </div>
-                                  </div>
-                                )
-                              })()}
+                              <h4 className="text-sm font-semibold text-fg mb-2">Duration Analysis</h4>
+                              <div className="text-sm text-fg/90">
+                                <span className="font-medium">Active for:</span> {daysSinceFirstSeen.toFixed(0)} days
+                              </div>
                             </div>
                           </div>
                         </td>

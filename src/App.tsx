@@ -155,28 +155,51 @@ function App() {
   const RangeButton = ({ label, value }: { label: string; value: TimeRange }) => (
     <button
       onClick={() => setTimeRange(value)}
-      className={`px-3 py-1 rounded-md border text-sm transition-colors ${
-        timeRange === value
-          ? 'bg-brand-500 text-white border-brand-600'
-          : 'bg-surface text-fg border-border hover:bg-muted'
-      }`}
+      style={{
+        backgroundColor: timeRange === value ? 'rgba(139, 92, 246, 0.8)' : 'rgba(139, 92, 246, 0.1)',
+        color: timeRange === value ? 'white' : 'rgba(255, 255, 255, 0.9)',
+        border: '1px solid',
+        borderColor: timeRange === value ? 'rgba(139, 92, 246, 0.9)' : 'rgba(139, 92, 246, 0.3)',
+        padding: '6px 12px',
+        borderRadius: '6px',
+        fontSize: '14px',
+        fontWeight: '500',
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+        boxShadow: timeRange === value ? '0 0 15px rgba(139, 92, 246, 0.4)' : '0 0 5px rgba(139, 92, 246, 0.1)'
+      }}
     >
       {label}
     </button>
   )
 
-  const TabButton = ({ label, value }: { label: string; value: ActiveTab }) => (
-    <button
-      onClick={() => setActiveTab(value)}
-      className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-        activeTab === value
-          ? 'bg-brand-500 text-white'
-          : 'text-fg/70 hover:text-fg hover:bg-muted'
-      }`}
-    >
-      {label}
-    </button>
-  )
+  // TabButton component definition
+  const TabButton = ({ label, value }: { label: string; value: ActiveTab }) => {
+    console.log('TabButton render:', label, value, activeTab === value);
+    return (
+      <button
+        onClick={() => setActiveTab(value)}
+        style={{
+          backgroundColor: activeTab === value ? 'rgba(139, 92, 246, 0.8)' : 'rgba(139, 92, 246, 0.15)',
+          border: '1px solid',
+          borderColor: activeTab === value ? 'rgba(139, 92, 246, 0.9)' : 'rgba(139, 92, 246, 0.4)',
+          color: 'white',
+          padding: '8px 16px',
+          borderRadius: '8px',
+          fontSize: '14px',
+          fontWeight: '500',
+          cursor: 'pointer',
+          margin: '0 2px',
+          minWidth: '120px',
+          textAlign: 'center' as const,
+          boxShadow: activeTab === value ? '0 0 20px rgba(139, 92, 246, 0.4)' : '0 0 5px rgba(139, 92, 246, 0.1)',
+          transition: 'all 0.2s ease'
+        }}
+      >
+        {label}
+      </button>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-bg">
@@ -194,7 +217,14 @@ function App() {
           </div>
           
           {/* Data Source Indicator */}
-          <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg">
+          <div 
+            className="flex items-center gap-2 px-3 py-2 rounded-lg"
+            style={{
+              backgroundColor: 'rgba(139, 92, 246, 0.1)',
+              border: '1px solid rgba(139, 92, 246, 0.3)',
+              boxShadow: '0 0 10px rgba(139, 92, 246, 0.2)'
+            }}
+          >
             <span className="text-sm text-fg/70">Data:</span>
             <Badge 
               tone={dataSource === 'api' ? 'positive' : 'info'}
@@ -238,12 +268,22 @@ function App() {
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex items-center gap-1 bg-muted p-1 rounded-lg w-fit mb-6">
+        <div 
+          className="flex items-center gap-1 p-2 rounded-lg w-fit mb-6"
+          style={{
+            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+            border: '2px solid rgba(139, 92, 246, 0.6)',
+            boxShadow: '0 0 20px rgba(139, 92, 246, 0.3)',
+            zIndex: 9999,
+            position: 'relative'
+          }}
+        >
           <TabButton label="Overview" value="overview" />
           <TabButton label="Pools & Debt" value="pools" />
           <TabButton label="Liquidations Feed" value="liquidations" />
           <TabButton label="Borrowers Explorer" value="borrowers" />
         </div>
+
         {activeTab === 'overview' ? (
           <>
             {/* KPI Cards */}

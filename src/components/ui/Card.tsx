@@ -1,7 +1,10 @@
 import * as React from 'react';
 
-export function Card({ className = '', ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={['card', className].join(' ')} {...props} />;
+type Elevation = 'e0' | 'e1' | 'e2' | 'e3' | 'e4'
+
+export function Card({ className = '', elevation = 'e1', ...props }: React.HTMLAttributes<HTMLDivElement> & { elevation?: Elevation }) {
+  const glass = `glass glass-highlight glass-${elevation} rounded-md p-4`;
+  return <div className={[glass, className].join(' ')} {...props} />;
 }
 
 export function CardHeader({ title, subtitle }: { title: string; subtitle?: string }) {

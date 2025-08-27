@@ -1,12 +1,12 @@
 import * as React from 'react';
 
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'outline' | 'danger';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'outline' | 'danger' | 'glass';
   size?: 'sm' | 'md' | 'lg';
 };
 
 const base =
-  'inline-flex items-center justify-center rounded-md font-medium transition-colors ' +
+  'relative inline-flex items-center justify-center rounded-md font-medium transition-all duration-150 ' +
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--brand-500))] ' +
   'focus-visible:ring-offset-2 ring-offset-[hsl(var(--bg))] ' +
   'disabled:opacity-50 disabled:pointer-events-none';
@@ -19,15 +19,18 @@ const sizes: Record<NonNullable<ButtonProps['size']>, string> = {
 
 const variants: Record<NonNullable<ButtonProps['variant']>, string> = {
   primary:
-    'bg-brand-500 text-white hover:bg-brand-600 active:bg-brand-700 shadow-sm',
+    'bg-brand-500 text-white hover:scale-[1.01] hover:bg-brand-600 active:scale-[0.99] shadow-sm',
   secondary:
-    'bg-accent-500 text-white hover:bg-accent-600 active:bg-accent-600/90 shadow-sm',
+    'bg-accent-500 text-white hover:scale-[1.01] hover:bg-accent-600 active:scale-[0.99] shadow-sm',
   ghost:
     'bg-transparent text-fg hover:bg-muted active:bg-muted/80',
   outline:
     'border border-border bg-surface text-fg hover:bg-muted',
   danger:
-    'bg-destructive-500 text-white hover:bg-destructive-500/90 active:bg-destructive-500/80'
+    'bg-destructive-500 text-white hover:bg-destructive-500/90 active:bg-destructive-500/80',
+  glass:
+    'bg-white/14 text-white ring-1 ring-white/25 backdrop-blur-sm ' +
+    'hover:scale-[1.01] hover:bg-white/18 active:scale-[0.99]'
 };
 
 export function Button({ variant = 'primary', size = 'md', className = '', ...props }: ButtonProps) {

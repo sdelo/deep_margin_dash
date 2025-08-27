@@ -43,6 +43,26 @@
   --shadow-lg: var(--shadow-lg);
 }
 
+/* Glassmorphism tokens */
+:root {
+  --glass-tint-light: hsla(210, 65%, 52%, 0.06);
+  --glass-tint-dark: hsla(210, 65%, 52%, 0.10);
+  --glass-border-light: rgba(255, 255, 255, 0.25);
+  --glass-border-dark: rgba(255, 255, 255, 0.15);
+  --glass-bg-alpha-base: 0.08;
+  /* clamp 0.06-0.18 */
+  --glass-bg-alpha-min: 0.06;
+  --glass-bg-alpha-max: 0.18;
+  --glass-blur-e0: 6px;
+  --glass-blur-e1: 10px;
+  --glass-blur-e2: 12px;
+  --glass-blur-e3: 14px;
+  --glass-blur-e4: 16px;
+  --glass-shadow-e1: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --glass-shadow-e2: 0 12px 32px rgba(0, 0, 0, 0.14);
+  --glass-shadow-e3: 0 16px 40px rgba(0, 0, 0, 0.16);
+}
+
 /* Fonts (Google Fonts) — add to index.html or import here if preferred:
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -67,6 +87,32 @@
   --muted: 220 13% 17%;
   --border: 222 18% 18%;
 
+  /* Glass defaults (dark) */
+  --glass-bg: rgba(0, 0, 0, 0.75);
+  --glass-border: rgba(255, 255, 255, 0.35);
+
+  /* Glass blur values */
+  --glass-blur-e0: 6px;
+  --glass-blur-e1: 10px;
+  --glass-blur-e2: 12px;
+  --glass-blur-e3: 14px;
+  --glass-blur-e4: 16px;
+
+  /* Glass shadow values */
+  --glass-shadow-e1: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --glass-shadow-e2: 0 12px 32px rgba(0, 0, 0, 0.14);
+  --glass-shadow-e3: 0 16px 40px rgba(0, 0, 0, 0.16);
+
+  /* Glass tint values */
+  --glass-tint-light: hsla(210, 65%, 52%, 0.06);
+  --glass-tint-dark: hsla(210, 65%, 52%, 0.10);
+  --glass-border-light: rgba(255, 255, 255, 0.25);
+  --glass-border-dark: rgba(255, 255, 255, 0.15);
+  --glass-bg-alpha-base: 0.08;
+  /* clamp 0.06-0.18 */
+  --glass-bg-alpha-min: 0.06;
+  --glass-bg-alpha-max: 0.18;
+
   --brand-50: 191 94% 92%;
   --brand-100: 192 94% 85%;
   --brand-200: 193 90% 72%;
@@ -89,36 +135,15 @@
   --info-500: 199 89% 56%;
 }
 
-/* Light theme (use <html class="light"> or <body class="light">) */
+/* Light theme overrides for glass */
 .light {
-  --bg: 0 0% 100%;
-  --fg: 230 35% 15%;
-  --surface: 220 20% 98%;
-  --muted: 220 14% 96%;
-  --border: 220 15% 90%;
-
-  --brand-50: 186 100% 97%;
-  --brand-100: 187 93% 90%;
-  --brand-200: 188 92% 80%;
-  --brand-300: 189 90% 68%;
-  --brand-400: 190 92% 58%;
-  --brand-500: 191 94% 50%;
-  --brand-600: 193 88% 44%;
-  --brand-700: 195 82% 36%;
-  --brand-800: 197 75% 28%;
-  --brand-900: 199 70% 22%;
-  --brand-950: 201 68% 15%;
-
-  --accent-400: 268 100% 72%;
-  --accent-500: 268 100% 64%;
-  --accent-600: 268 90% 58%;
-
-  --success-500: 152 65% 48%;
-  --warning-500: 43 96% 56%;
-  --destructive-500: 0 84% 60%;
-  --info-500: 199 89% 48%;
+  --glass-tint: var(--glass-tint-light);
+  --glass-border: var(--glass-border-light);
+  --glass-bg: rgba(255, 255, 255, 0.20);
+  --glass-border: rgba(0, 0, 0, 0.15);
 }
 
+/**************** Base ****************/
 @layer base {
   html {
     font-family: theme('fontFamily.sans');
@@ -131,19 +156,308 @@
   * {
     @apply border-border;
   }
+
+  /* Brand-tinted background art layer (behind everything) */
+  body {
+    position: relative;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(800px 600px at 10% 20%, hsl(var(--brand-500) / 0.15), transparent 70%),
+      radial-gradient(700px 500px at 110% 30%, hsl(var(--accent-500) / 0.12), transparent 70%),
+      radial-gradient(600px 400px at 50% 80%, hsl(var(--brand-800) / 0.10), transparent 75%),
+      linear-gradient(180deg, hsl(var(--bg)), hsl(var(--bg)) 60%, hsl(var(--bg)) 100%);
+    filter: saturate(110%);
+  }
+
+  /* Subtle grid/noise overlay for texture */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 26px 26px;
+    opacity: 0.03;
+    mix-blend-mode: overlay;
+  }
 }
 
-/* Card & surface helpers */
+/**************** Utilities & Components ****************/
 @layer components {
+
+  /* Card & surface helpers */
   .container {
     @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+    position: relative;
+    z-index: 1;
+  }
+
+  main {
+    position: relative;
+    z-index: 1;
   }
 
   .card {
-    @apply bg-surface text-fg rounded-md shadow-sm border p-4;
+    @apply bg-surface text-fg rounded-md shadow-sm p-4;
+    border: 1px solid;
+    border-image: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(59, 130, 246, 0.3)) 1;
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.1);
   }
 
   .divider {
     @apply border-t border;
+  }
+
+  /* Glass base utility (E1 by default) */
+  .glass {
+    position: relative;
+    z-index: 2;
+    /* Real glassmorphism: translucent with backdrop blur */
+    background-color: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(var(--glass-blur, var(--glass-blur-e1)));
+    -webkit-backdrop-filter: blur(var(--glass-blur, var(--glass-blur-e1)));
+    /* Blue/purple border mix */
+    border: 1px solid;
+    border-image: linear-gradient(135deg, rgba(139, 92, 246, 0.4), rgba(59, 130, 246, 0.4)) 1;
+    box-shadow: var(--glass-shadow, var(--glass-shadow-e1)), 0 0 15px rgba(139, 92, 246, 0.15);
+
+    /* Smooth transitions for interactions */
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Proper elevation scaling for Glassmorphism 2.0 */
+  .glass-e0 {
+    --glass-blur: var(--glass-blur-e0);
+    --glass-shadow: var(--glass-shadow-e1);
+    background-color: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+
+  .glass-e1 {
+    --glass-blur: var(--glass-blur-e1);
+    --glass-shadow: var(--glass-shadow-e1);
+    background-color: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  .glass-e2 {
+    --glass-blur: var(--glass-blur-e2);
+    --glass-shadow: var(--glass-shadow-e2);
+    background-color: rgba(255, 255, 255, 0.10);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .glass-e3 {
+    --glass-blur: var(--glass-blur-e3);
+    --glass-shadow: var(--glass-shadow-e3);
+    background-color: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  .glass-e4 {
+    --glass-blur: var(--glass-blur-e4);
+    --glass-shadow: var(--glass-shadow-e3);
+    background-color: rgba(255, 255, 255, 0.14);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  /* Light theme adjustments for proper contrast */
+  .light .glass {
+    background-color: rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.15);
+  }
+
+  .light .glass-e0 {
+    background-color: rgba(0, 0, 0, 0.06);
+  }
+
+  .light .glass-e1 {
+    background-color: rgba(0, 0, 0, 0.08);
+  }
+
+  .light .glass-e2 {
+    background-color: rgba(0, 0, 0, 0.10);
+  }
+
+  .light .glass-e3 {
+    background-color: rgba(0, 0, 0, 0.12);
+  }
+
+  .light .glass-e4 {
+    background-color: rgba(0, 0, 0, 0.14);
+  }
+
+  /* Hover effects for interactive glass elements */
+  .glass:hover {
+    transform: scale(1.01);
+    /* Rim highlight brightens on hover */
+    border-color: rgba(255, 255, 255, 0.35);
+    box-shadow:
+      var(--glass-shadow, var(--glass-shadow-e1)),
+      0 8px 25px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Active state for buttons and interactive elements */
+  .glass:active {
+    transform: scale(0.99);
+    /* Glass "hardens" - reduce blur by 2px */
+    backdrop-filter: blur(calc(var(--glass-blur, var(--glass-blur-e1)) - 2px));
+    -webkit-backdrop-filter: blur(calc(var(--glass-blur, var(--glass-blur-e1)) - 2px));
+    transition: all 0.1s ease;
+  }
+
+  /* Chart reveal animation - blur-in instead of just appearing */
+  .glass.chart-reveal {
+    animation: glassReveal 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @keyframes glassReveal {
+    from {
+      opacity: 0;
+      backdrop-filter: blur(0px);
+      -webkit-backdrop-filter: blur(0px);
+      transform: translateY(10px);
+    }
+
+    to {
+      opacity: 1;
+      backdrop-filter: blur(var(--glass-blur, var(--glass-blur-e1)));
+      -webkit-backdrop-filter: blur(var(--glass-blur, var(--glass-blur-e1)));
+      transform: translateY(0px);
+    }
+  }
+
+  .glass-highlight::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), transparent 70%);
+    pointer-events: none;
+  }
+
+  /* Ensure tables maintain dark styling regardless of glass effects */
+  table {
+    background-color: hsl(var(--surface)) !important;
+    color: hsl(var(--fg)) !important;
+  }
+
+  th,
+  td {
+    background-color: hsl(var(--surface)) !important;
+    color: hsl(var(--fg)) !important;
+    border-color: hsl(var(--border)) !important;
+  }
+
+  /* Override any glass effects on table elements */
+  .glass table,
+  .glass th,
+  .glass td {
+    background-color: hsl(var(--surface)) !important;
+    color: hsl(var(--fg)) !important;
+  }
+
+  /* Fallback: when backdrop-filter is not supported */
+  [data-backdrop="off"] .glass {
+    --glass-blur: 0px;
+    background-color: rgba(0, 0, 0, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+  }
+
+  .light [data-backdrop="off"] .glass {
+    background-color: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(0, 0, 0, 0.15);
+  }
+
+  /* Elevation-specific fallbacks */
+  [data-backdrop="off"] .glass-e0 {
+    background-color: rgba(0, 0, 0, 0.80);
+  }
+
+  [data-backdrop="off"] .glass-e1 {
+    background-color: rgba(0, 0, 0, 0.82);
+  }
+
+  [data-backdrop="off"] .glass-e2 {
+    background-color: rgba(0, 0, 0, 0.85);
+  }
+
+  [data-backdrop="off"] .glass-e3 {
+    background-color: rgba(0, 0, 0, 0.88);
+  }
+
+  [data-backdrop="off"] .glass-e4 {
+    background-color: rgba(0, 0, 0, 0.90);
+  }
+
+  .light [data-backdrop="off"] .glass-e0 {
+    background-color: rgba(255, 255, 255, 0.80);
+  }
+
+  .light [data-backdrop="off"] .glass-e1 {
+    background-color: rgba(255, 255, 255, 0.82);
+  }
+
+  .light [data-backdrop="off"] .glass-e2 {
+    background-color: rgba(255, 255, 255, 0.85);
+  }
+
+  .light [data-backdrop="off"] .glass-e3 {
+    background-color: rgba(255, 255, 255, 0.88);
+  }
+
+  .light [data-backdrop="off"] .glass-e4 {
+    background-color: rgba(255, 255, 255, 0.90);
+  }
+
+  /* Table zebra rows and hover for readability */
+  table tbody tr:nth-child(odd) td {
+    background-color: rgba(255, 255, 255, 0.02) !important;
+  }
+
+  table tbody tr:hover td {
+    background-color: rgba(255, 255, 255, 0.06) !important;
+  }
+
+  .light table tbody tr:nth-child(odd) td {
+    background-color: rgba(0, 0, 0, 0.03) !important;
+  }
+
+  .light table tbody tr:hover td {
+    background-color: rgba(0, 0, 0, 0.06) !important;
+  }
+
+  /* Stronger header/cell typography for contrast */
+  table th {
+    font-weight: 600;
+    opacity: 0.95;
+  }
+
+  table td {
+    opacity: 0.9;
+  }
+}
+
+/**************** Motion ****************/
+@media (prefers-reduced-motion: reduce) {
+  .hover\:scale-\[1\.01\]:hover {
+    transform: none !important;
+  }
+
+  .active\:scale-\[0\.99\]:active {
+    transform: none !important;
   }
 }
