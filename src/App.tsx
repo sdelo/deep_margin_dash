@@ -5,6 +5,11 @@ import type { DashboardData } from './types/data'
 import { PoolsTable } from './components/PoolsTable'
 import { LiquidationsFeed } from './components/LiquidationsFeed'
 import { BorrowersExplorer } from './components/BorrowersExplorer'
+import { AppHeader } from './components/AppHeader'
+import { Button } from './components/ui/Button'
+import { Card, CardHeader } from './components/ui/Card'
+import { Badge } from './components/ui/Badge'
+import { initializeTheme } from './utils/theme'
 import './App.css'
 
 type TimeRange = '24h' | '7d' | '30d' | 'all'
@@ -26,6 +31,11 @@ function App() {
   // Load data on component mount
   useEffect(() => {
     loadData()
+  }, [])
+
+  // Initialize theme
+  useEffect(() => {
+    initializeTheme()
   }, [])
 
   const rangeStartMs = (): number => {
@@ -145,10 +155,10 @@ function App() {
   const RangeButton = ({ label, value }: { label: string; value: TimeRange }) => (
     <button
       onClick={() => setTimeRange(value)}
-      className={`px-3 py-1 rounded-md border text-sm ${
+      className={`px-3 py-1 rounded-md border text-sm transition-colors ${
         timeRange === value
-          ? 'bg-blue-600 text-white border-blue-700'
-          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+          ? 'bg-brand-500 text-white border-brand-600'
+          : 'bg-surface text-fg border-border hover:bg-muted'
       }`}
     >
       {label}
@@ -158,10 +168,10 @@ function App() {
   const TabButton = ({ label, value }: { label: string; value: ActiveTab }) => (
     <button
       onClick={() => setActiveTab(value)}
-      className={`px-4 py-2 text-sm font-medium rounded-lg ${
+      className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
         activeTab === value
-          ? 'bg-blue-600 text-white'
-          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+          ? 'bg-brand-500 text-white'
+          : 'text-fg/70 hover:text-fg hover:bg-muted'
       }`}
     >
       {label}
@@ -169,138 +179,141 @@ function App() {
   )
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-blue-900">DeepBook Liquidation Dashboard</h1>
-              <p className="text-gray-600 mt-1">Real-time margin trading insights</p>
-              {data.lastUpdated && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Last updated: {new Date(data.lastUpdated).toLocaleString()}
-                </p>
-              )}
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="hidden md:flex items-center gap-2 mr-2">
-                <RangeButton label="24h" value="24h" />
-                <RangeButton label="7d" value="7d" />
-                <RangeButton label="30d" value="30d" />
-                <RangeButton label="All" value="all" />
-              </div>
-              
-              {/* Data Source Indicator */}
-              <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg">
-                <span className="text-sm text-gray-600">Data:</span>
-                <span className={`px-2 py-1 text-xs font-medium rounded ${
-                  dataSource === 'api' 
-                    ? 'bg-green-100 text-green-800' 
-                    : 'bg-blue-100 text-blue-800'
-                }`}>
-                  {dataSource === 'api' ? 'Live API' : 'Static File'}
-                </span>
-              </div>
-              
-              <button 
-                onClick={loadData}
-                disabled={loading}
-                className="btn-primary disabled:opacity-50"
-              >
-                {loading ? 'Refreshing...' : 'Refresh Data'}
-              </button>
-              
-              {/* Data Source Toggle (Development Only) */}
-              {import.meta.env.DEV && (
-                <button 
-                  onClick={() => {
-                    const newSource = dataSource === 'api' ? 'static' : 'api'
-                    dataService.setDataSource(newSource)
-                    setDataSource(newSource)
-                    loadData()
-                  }}
-                  className="px-3 py-2 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors"
-                  title="Toggle between API and static data (dev only)"
-                >
-                  Switch to {dataSource === 'api' ? 'Static' : 'API'}
-                </button>
-              )}
-            </div>
+    <div className="min-h-screen bg-bg">
+      <AppHeader />
+      
+      {/* Main Content */}
+      <main className="container py-6">
+        {/* Time Range Controls */}
+        <div className="flex flex-wrap items-center gap-3 mb-6">
+          <div className="flex items-center gap-2">
+            <RangeButton label="24h" value="24h" />
+            <RangeButton label="7d" value="7d" />
+            <RangeButton label="30d" value="30d" />
+            <RangeButton label="All" value="all" />
           </div>
+          
+          {/* Data Source Indicator */}
+          <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg">
+            <span className="text-sm text-fg/70">Data:</span>
+            <Badge 
+              tone={dataSource === 'api' ? 'positive' : 'info'}
+              className="text-xs"
+            >
+              {dataSource === 'api' ? 'Live API' : 'Static File'}
+            </Badge>
+          </div>
+          
+          <Button 
+            onClick={loadData}
+            disabled={loading}
+            variant="outline"
+            size="sm"
+          >
+            {loading ? 'Refreshing...' : 'Refresh Data'}
+          </Button>
+          
+          {/* Data Source Toggle (Development Only) */}
+          {import.meta.env.DEV && (
+            <Button 
+              onClick={() => {
+                const newSource = dataSource === 'api' ? 'static' : 'api'
+                dataService.setDataSource(newSource)
+                setDataSource(newSource)
+                loadData()
+              }}
+              variant="ghost"
+              size="sm"
+              title="Toggle between API and static data (dev only)"
+            >
+              Switch to {dataSource === 'api' ? 'Static' : 'API'}
+            </Button>
+          )}
+          
+          {data.lastUpdated && (
+            <span className="text-xs text-fg/50 ml-auto">
+              Last updated: {new Date(data.lastUpdated).toLocaleString()}
+            </span>
+          )}
         </div>
-      </header>
 
-      {/* Navigation Tabs */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-        <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg w-fit">
+        {/* Navigation Tabs */}
+        <div className="flex items-center gap-1 bg-muted p-1 rounded-lg w-fit mb-6">
           <TabButton label="Overview" value="overview" />
           <TabButton label="Pools & Debt" value="pools" />
           <TabButton label="Liquidations Feed" value="liquidations" />
           <TabButton label="Borrowers Explorer" value="borrowers" />
         </div>
-      </div>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === 'overview' ? (
           <>
             {/* KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <div className="kpi-card">
-                <h3 className="text-sm font-medium text-blue-700">New Margin Traders (24h)</h3>
-                <p className="text-3xl font-bold text-blue-900 mt-2">{kpis.newMarginTraders}</p>
-                <p className="text-sm text-blue-600 mt-1">Active today</p>
-              </div>
+              <Card>
+                <CardHeader 
+                  title="New Margin Traders (24h)" 
+                  subtitle="Active today"
+                />
+                <p className="text-3xl font-bold text-brand-600">{kpis.newMarginTraders}</p>
+              </Card>
               
-              <div className="kpi-card">
-                <h3 className="text-sm font-medium text-blue-700">Active Traders</h3>
-                <p className="text-3xl font-bold text-blue-900 mt-2">{kpis.activeTraders}</p>
-                <p className="text-sm text-blue-600 mt-1">In selected range</p>
-              </div>
+              <Card>
+                <CardHeader 
+                  title="Active Traders" 
+                  subtitle="In selected range"
+                />
+                <p className="text-3xl font-bold text-brand-600">{kpis.activeTraders}</p>
+              </Card>
               
-              <div className="kpi-card">
-                <h3 className="text-sm font-medium text-blue-700">Borrowed (range)</h3>
-                <p className="text-3xl font-bold text-blue-900 mt-2">${(kpis.borrowed / 1_000_000).toFixed(1)}M</p>
-                <p className="text-sm text-blue-600 mt-1">Total borrowed</p>
-              </div>
+              <Card>
+                <CardHeader 
+                  title="Borrowed (range)" 
+                  subtitle="Total borrowed"
+                />
+                <p className="text-3xl font-bold text-brand-600">${(kpis.borrowed / 1_000_000).toFixed(1)}M</p>
+              </Card>
               
-              <div className="kpi-card">
-                <h3 className="text-sm font-medium text-blue-700">Net Debt Change</h3>
-                <p className={`text-3xl font-bold mt-2 ${netDebtChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              <Card>
+                <CardHeader 
+                  title="Net Debt Change" 
+                  subtitle="Selected range"
+                />
+                <p className={`text-3xl font-bold ${netDebtChange >= 0 ? 'text-success-500' : 'text-destructive-500'}`}>
                   {netDebtChange >= 0 ? '+' : ''}${(netDebtChange / 1_000_000).toFixed(1)}M
                 </p>
-                <p className="text-sm text-blue-600 mt-1">Selected range</p>
-              </div>
+              </Card>
             </div>
 
             {/* Additional KPI Row */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <div className="kpi-card">
-                <h3 className="text-sm font-medium text-blue-700">Liquidations (range)</h3>
-                <p className="text-3xl font-bold text-blue-900 mt-2">{kpis.liquidations}</p>
-                <p className="text-sm text-blue-600 mt-1">Events</p>
-              </div>
+              <Card>
+                <CardHeader 
+                  title="Liquidations (range)" 
+                  subtitle="Events"
+                />
+                <p className="text-3xl font-bold text-brand-600">{kpis.liquidations}</p>
+              </Card>
               
-              <div className="kpi-card">
-                <h3 className="text-sm font-medium text-blue-700">Defaults</h3>
-                <p className="text-3xl font-bold text-blue-900 mt-2">${(kpis.defaults / 1_000).toFixed(1)}K</p>
-                <p className="text-sm text-blue-600 mt-1">Total losses</p>
-              </div>
+              <Card>
+                <CardHeader 
+                  title="Defaults" 
+                  subtitle="Total losses"
+                />
+                <p className="text-3xl font-bold text-brand-600">${(kpis.defaults / 1_000).toFixed(1)}K</p>
+              </Card>
               
-              <div className="kpi-card">
-                <h3 className="text-sm font-medium text-blue-700">Pool Rewards</h3>
-                <p className="text-3xl font-bold text-blue-900 mt-2">${(kpis.poolRewards / 1_000).toFixed(1)}K</p>
-                <p className="text-sm text-blue-600 mt-1">Protocol income</p>
-              </div>
+              <Card>
+                <CardHeader 
+                  title="Pool Rewards" 
+                  subtitle="Protocol income"
+                />
+                <p className="text-3xl font-bold text-brand-600">${(kpis.poolRewards / 1_000).toFixed(1)}K</p>
+              </Card>
             </div>
 
             {/* Charts Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-              <div className="card">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Borrow vs Repay ({timeRange})</h3>
-                </div>
+              <Card>
+                <CardHeader title={`Borrow vs Repay (${timeRange})`} />
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData}>
@@ -308,17 +321,15 @@ function App() {
                       <XAxis dataKey="date" />
                       <YAxis />
                       <Tooltip formatter={(value) => [`$${(Number(value) / 1000).toFixed(1)}K`, '']} />
-                      <Line type="monotone" dataKey="borrowed" stroke="#3b82f6" strokeWidth={2} name="Borrowed" />
-                      <Line type="monotone" dataKey="repaid" stroke="#10b981" strokeWidth={2} name="Repaid" />
+                      <Line type="monotone" dataKey="borrowed" stroke="hsl(var(--brand-500))" strokeWidth={2} name="Borrowed" />
+                      <Line type="monotone" dataKey="repaid" stroke="hsl(var(--success-500))" strokeWidth={2} name="Repaid" />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
-              </div>
+              </Card>
               
-              <div className="card">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Liquidations ({timeRange})</h3>
-                </div>
+              <Card>
+                <CardHeader title={`Liquidations (${timeRange})`} />
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={liquidationChartData}>
@@ -326,47 +337,47 @@ function App() {
                       <XAxis dataKey="date" />
                       <YAxis />
                       <Tooltip formatter={(value, name) => [name === 'amount' ? `$${(Number(value) / 1000).toFixed(1)}K` : value, name === 'amount' ? 'Amount' : 'Count']} />
-                      <Bar dataKey="count" fill="#ef4444" name="Count" />
-                      <Bar dataKey="amount" fill="#f59e0b" name="Amount" />
+                      <Bar dataKey="count" fill="hsl(var(--destructive-500))" name="Count" />
+                      <Bar dataKey="amount" fill="hsl(var(--warning-500))" name="Amount" />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-              </div>
+              </Card>
             </div>
 
             {/* Latest Liquidations Ticker */}
-            <div className="card">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Latest Liquidations</h3>
+            <Card>
+              <CardHeader title="Latest Liquidations" />
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-border">
+                  <thead className="bg-muted/50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pool</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Default Ratio</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pool Reward</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">Time</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">Pool</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">Amount</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">Default Ratio</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">Pool Reward</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-surface divide-y divide-border">
                     {data.liquidations
                       .sort((a, b) => b.liquidated_at - a.liquidated_at)
                       .slice(0, 20)
                       .map((liq) => (
-                      <tr key={liq.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <tr key={liq.id} className="hover:bg-muted transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-fg">
                           {new Date(liq.liquidated_at).toLocaleString()}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-brand-600">
                           {liq.margin_pool_id}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-fg">
                           ${(liq.liquidation_amount / 1000).toFixed(1)}K
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-fg">
                           {((liq.default_amount / liq.liquidation_amount) * 100).toFixed(1)}%
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-fg">
                           ${(liq.pool_reward_amount / 1000).toFixed(1)}K
                         </td>
                       </tr>
@@ -374,7 +385,7 @@ function App() {
                   </tbody>
                 </table>
               </div>
-            </div>
+            </Card>
           </>
         ) : activeTab === 'pools' ? (
           /* Pools & Debt Tab */

@@ -1,21 +1,149 @@
 @import "tailwindcss";
 
+/* Tailwind v4 theme tokens mapping -> enables bg-bg, text-fg, rounded-md, shadow-sm, etc. */
+@theme {
+  /* Colors */
+  --color-bg: hsl(var(--bg));
+  --color-fg: hsl(var(--fg));
+  --color-surface: hsl(var(--surface));
+  --color-muted: hsl(var(--muted));
+  --color-border: hsl(var(--border));
+
+  --color-brand-50: hsl(var(--brand-50));
+  --color-brand-100: hsl(var(--brand-100));
+  --color-brand-200: hsl(var(--brand-200));
+  --color-brand-300: hsl(var(--brand-300));
+  --color-brand-400: hsl(var(--brand-400));
+  --color-brand-500: hsl(var(--brand-500));
+  --color-brand-600: hsl(var(--brand-600));
+  --color-brand-700: hsl(var(--brand-700));
+  --color-brand-800: hsl(var(--brand-800));
+  --color-brand-900: hsl(var(--brand-900));
+  --color-brand-950: hsl(var(--brand-950));
+
+  --color-accent-400: hsl(var(--accent-400));
+  --color-accent-500: hsl(var(--accent-500));
+  --color-accent-600: hsl(var(--accent-600));
+
+  --color-success-500: hsl(var(--success-500));
+  --color-warning-500: hsl(var(--warning-500));
+  --color-destructive-500: hsl(var(--destructive-500));
+  --color-info-500: hsl(var(--info-500));
+
+  /* Radii */
+  --radius-sm: var(--radius-sm);
+  --radius: var(--radius-md);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+
+  /* Shadows */
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+}
+
+/* Fonts (Google Fonts) — add to index.html or import here if preferred:
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+*/
+
+:root {
+  /* Radii */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 18px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 10px 35px rgba(0, 0, 0, 0.16);
+
+  /* Dark theme (default) */
+  --bg: 222 44% 6%;
+  --fg: 220 14% 96%;
+  --surface: 222 36% 9%;
+  --muted: 220 13% 17%;
+  --border: 222 18% 18%;
+
+  --brand-50: 191 94% 92%;
+  --brand-100: 192 94% 85%;
+  --brand-200: 193 90% 72%;
+  --brand-300: 194 88% 60%;
+  --brand-400: 195 88% 52%;
+  --brand-500: 196 95% 49%;
+  --brand-600: 198 90% 42%;
+  --brand-700: 199 86% 36%;
+  --brand-800: 200 80% 28%;
+  --brand-900: 201 75% 20%;
+  --brand-950: 202 72% 14%;
+
+  --accent-400: 268 100% 76%;
+  --accent-500: 268 100% 72%;
+  --accent-600: 268 90% 64%;
+
+  --success-500: 152 65% 52%;
+  --warning-500: 43 96% 58%;
+  --destructive-500: 0 84% 64%;
+  --info-500: 199 89% 56%;
+}
+
+/* Light theme (use <html class="light"> or <body class="light">) */
+.light {
+  --bg: 0 0% 100%;
+  --fg: 230 35% 15%;
+  --surface: 220 20% 98%;
+  --muted: 220 14% 96%;
+  --border: 220 15% 90%;
+
+  --brand-50: 186 100% 97%;
+  --brand-100: 187 93% 90%;
+  --brand-200: 188 92% 80%;
+  --brand-300: 189 90% 68%;
+  --brand-400: 190 92% 58%;
+  --brand-500: 191 94% 50%;
+  --brand-600: 193 88% 44%;
+  --brand-700: 195 82% 36%;
+  --brand-800: 197 75% 28%;
+  --brand-900: 199 70% 22%;
+  --brand-950: 201 68% 15%;
+
+  --accent-400: 268 100% 72%;
+  --accent-500: 268 100% 64%;
+  --accent-600: 268 90% 58%;
+
+  --success-500: 152 65% 48%;
+  --warning-500: 43 96% 56%;
+  --destructive-500: 0 84% 60%;
+  --info-500: 199 89% 48%;
+}
+
 @layer base {
+  html {
+    font-family: theme('fontFamily.sans');
+  }
+
   body {
-    @apply bg-gray-50 text-gray-900;
+    @apply bg-bg text-fg;
+  }
+
+  * {
+    @apply border-border;
   }
 }
 
+/* Card & surface helpers */
 @layer components {
-  .btn-primary {
-    @apply bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200;
+  .container {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
   }
 
   .card {
-    @apply bg-white rounded-xl shadow-sm border border-gray-200 p-6;
+    @apply bg-surface text-fg rounded-md shadow-sm border p-4;
   }
 
-  .kpi-card {
-    @apply bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-6;
+  .divider {
+    @apply border-t border;
   }
 }

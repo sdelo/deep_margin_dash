@@ -7,20 +7,35 @@ export default {
     theme: {
         extend: {
             colors: {
-                'deepbook-blue': {
-                    50: '#eff6ff',
-                    100: '#dbeafe',
-                    200: '#bfdbfe',
-                    300: '#93c5fd',
-                    400: '#60a5fa',
-                    500: '#3b82f6',
-                    600: '#2563eb',
-                    700: '#1d4ed8',
-                    800: '#1e40af',
-                    900: '#1e3a8a',
-                }
+                bg: 'hsl(var(--bg))',
+                fg: 'hsl(var(--fg))',
+                surface: 'hsl(var(--surface))',
+                muted: 'hsl(var(--muted))',
+                border: 'hsl(var(--border))',
+                brand: {
+                    50: 'hsl(var(--brand-50))',
+                    100: 'hsl(var(--brand-100))',
+                    200: 'hsl(var(--brand-200))',
+                    300: 'hsl(var(--brand-300))',
+                    400: 'hsl(var(--brand-400))',
+                    500: 'hsl(var(--brand-500))',
+                    600: 'hsl(var(--brand-600))',
+                    700: 'hsl(var(--brand-700))',
+                    800: 'hsl(var(--brand-800))',
+                    900: 'hsl(var(--brand-900))',
+                    950: 'hsl(var(--brand-950))'
+                },
+                accent: {
+                    400: 'hsl(var(--accent-400))',
+                    500: 'hsl(var(--accent-500))',
+                    600: 'hsl(var(--accent-600))'
+                },
+                success: { 500: 'hsl(var(--success-500))' },
+                warning: { 500: 'hsl(var(--warning-500))' },
+                destructive: { 500: 'hsl(var(--destructive-500))' },
+                info: { 500: 'hsl(var(--info-500))' }
             }
-        },
+        }
     },
-    plugins: [],
+    plugins: []
 }
