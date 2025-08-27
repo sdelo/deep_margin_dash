@@ -101,6 +101,16 @@ export function LiquidationsFeed({ liquidations, loans }: LiquidationsFeedProps)
     setExpandedRow(expandedRow === liquidationId ? null : liquidationId)
   }
 
+  const resetFilters = () => {
+    setFilters({
+      pool: 'all',
+      defaultRatioMin: 0,
+      defaultRatioMax: 100,
+      minAmount: 0,
+      timeRange: 'all'
+    })
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -115,93 +125,75 @@ export function LiquidationsFeed({ liquidations, loans }: LiquidationsFeedProps)
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-6 rounded-lg shadow border">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">Filters</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          {/* Time Range */}
+      <div className="bg-surface border border-border rounded-lg p-4 mb-6 shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Time Range</label>
-            <select
-              value={filters.timeRange}
-              onChange={(e) => setFilters(prev => ({ ...prev, timeRange: e.target.value as FilterState['timeRange'] }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            <label className="block text-sm font-medium text-fg mb-2">Time Range</label>
+            <select 
+              value={filters.timeRange} 
+              onChange={(e) => setFilters({...filters, timeRange: e.target.value as '24h' | '7d' | '30d' | 'all'})}
+              className="w-full px-3 py-2 rounded-md border border-border bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
             >
               <option value="all">All Time</option>
               <option value="24h">Last 24h</option>
-              <option value="7d">Last 7d</option>
-              <option value="30d">Last 30d</option>
+              <option value="7d">Last 7 days</option>
+              <option value="30d">Last 30 days</option>
             </select>
           </div>
-
-          {/* Pool */}
+          
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Pool</label>
-            <select
-              value={filters.pool}
-              onChange={(e) => setFilters(prev => ({ ...prev, pool: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            <label className="block text-sm font-medium text-fg mb-2">Pool</label>
+            <select 
+              value={filters.pool} 
+              onChange={(e) => setFilters({...filters, pool: e.target.value})}
+              className="w-full px-3 py-2 rounded-md border border-border bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
             >
-              {uniquePools.map(pool => (
-                <option key={pool} value={pool}>
-                  {pool === 'all' ? 'All Pools' : pool}
-                </option>
+              <option value="all">All Pools</option>
+              {Array.from(new Set(liquidations.map(l => l.margin_pool_id))).map(pool => (
+                <option key={pool} value={pool}>{pool}</option>
               ))}
             </select>
           </div>
-
-          {/* Default Ratio Range */}
+          
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Default Ratio (%)</label>
+            <label className="block text-sm font-medium text-fg mb-2">Default Ratio (%)</label>
             <div className="flex gap-2">
-              <input
-                type="number"
-                placeholder="Min"
-                value={filters.defaultRatioMin}
+              <input 
+                type="number" 
+                placeholder="0" 
+                value={filters.defaultRatioMin} 
                 onChange={(e) => setFilters(prev => ({ ...prev, defaultRatioMin: Number(e.target.value) }))}
-                className="w-full px-2 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                min="0"
-                max="100"
+                className="w-full px-3 py-2 rounded-md border border-border bg-surface text-fg placeholder:text-fg/50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
               />
-              <input
-                type="number"
-                placeholder="Max"
-                value={filters.defaultRatioMax}
+              <input 
+                type="number" 
+                placeholder="100" 
+                value={filters.defaultRatioMax} 
                 onChange={(e) => setFilters(prev => ({ ...prev, defaultRatioMax: Number(e.target.value) }))}
-                className="w-full px-2 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                min="0"
-                max="100"
+                className="w-full px-3 py-2 rounded-md border border-border bg-surface text-fg placeholder:text-fg/50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
               />
             </div>
           </div>
-
-          {/* Min Amount */}
+          
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Min Amount ($)</label>
-            <input
-              type="number"
-              placeholder="0"
-              value={filters.minAmount}
+            <label className="block text-sm font-medium text-fg mb-2">Min Amount ($)</label>
+            <input 
+              type="number" 
+              placeholder="0" 
+              value={filters.minAmount} 
               onChange={(e) => setFilters(prev => ({ ...prev, minAmount: Number(e.target.value) }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              min="0"
+              className="w-full px-3 py-2 rounded-md border border-border bg-surface text-fg placeholder:text-fg/50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
             />
           </div>
-
-          {/* Reset Filters */}
-          <div className="flex items-end">
-            <button
-              onClick={() => setFilters({
-                pool: 'all',
-                defaultRatioMin: 0,
-                defaultRatioMax: 100,
-                minAmount: 0,
-                timeRange: 'all'
-              })}
-              className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-md text-sm hover:bg-gray-200 transition-colors"
-            >
-              Reset
-            </button>
-          </div>
+        </div>
+        
+        <div className="mt-4 flex justify-end">
+          <button 
+            onClick={resetFilters}
+            className="px-4 py-2 bg-muted text-fg rounded-md hover:bg-muted/80 transition-colors border border-border"
+          >
+            Reset
+          </button>
         </div>
       </div>
 

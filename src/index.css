@@ -149,44 +149,35 @@
     font-family: theme('fontFamily.sans');
   }
 
-  body {
-    @apply bg-bg text-fg;
-  }
-
-  * {
-    @apply border-border;
-  }
-
   /* Brand-tinted background art layer (behind everything) */
   body {
+    @apply bg-bg text-fg;
     position: relative;
-  }
-
-  body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
     background:
-      radial-gradient(800px 600px at 10% 20%, hsl(var(--brand-500) / 0.15), transparent 70%),
-      radial-gradient(700px 500px at 110% 30%, hsl(var(--accent-500) / 0.12), transparent 70%),
-      radial-gradient(600px 400px at 50% 80%, hsl(var(--brand-800) / 0.10), transparent 75%),
-      linear-gradient(180deg, hsl(var(--bg)), hsl(var(--bg)) 60%, hsl(var(--bg)) 100%);
-    filter: saturate(110%);
+      radial-gradient(1200px 800px at 10% 20%, rgba(139, 92, 246, 0.25), transparent 60%),
+      radial-gradient(1000px 700px at 110% 30%, rgba(59, 130, 246, 0.20), transparent 60%),
+      radial-gradient(900px 600px at 50% 80%, rgba(139, 92, 246, 0.18), transparent 65%),
+      linear-gradient(180deg, #1a1a2e, #1a1a2e 60%, #1a1a2e 100%),
+      #1a1a2e;
+    background-attachment: fixed;
+    filter: saturate(115%);
   }
 
-  /* Subtle grid/noise overlay for texture */
+  /* Add grid texture overlay */
   body::after {
     content: "";
     position: fixed;
     inset: 0;
-    z-index: -1;
+    z-index: 0;
     pointer-events: none;
-    background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
     background-size: 26px 26px;
-    opacity: 0.03;
+    opacity: 0.06;
     mix-blend-mode: overlay;
+  }
+
+  * {
+    @apply border-border;
   }
 }
 
@@ -194,6 +185,7 @@
 @layer components {
 
   /* Card & surface helpers */
+  /* Ensure main content has proper z-index */
   .container {
     @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
     position: relative;
@@ -203,13 +195,20 @@
   main {
     position: relative;
     z-index: 1;
+    background-color: rgba(26, 26, 46, 0.2) !important;
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
   }
 
+  /* Make cards and content semi-transparent so background shows through */
   .card {
     @apply bg-surface text-fg rounded-md shadow-sm p-4;
     border: 1px solid;
     border-image: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(59, 130, 246, 0.3)) 1;
     box-shadow: 0 0 10px rgba(139, 92, 246, 0.1);
+    background-color: rgba(26, 26, 46, 0.3) !important;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
   }
 
   .divider {
