@@ -53,7 +53,8 @@ export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersEx
     positionSummaries, 
     dashboardMetrics, 
     loading: deepbookLoading, 
-    error: deepbookError 
+    error: deepbookError,
+    data
   } = useDeepBookData()
 
   // Calculate borrower data with event-sourced positions
@@ -286,6 +287,55 @@ export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersEx
     return durations
   }
 
+  // Helper functions for enhanced metrics
+  const calculateBorrowUsed = (borrower: BorrowerData): { percentage: number; color: string; label: string } => {
+    if (!borrower.deepbookPosition) {
+      // Fallback calculation using existing data
+      const totalAssets = borrower.totalOutstandingDebt + (borrower.defaultSum || 0)
+      const borrowUsed = totalAssets > 0 ? (borrower.totalOutstandingDebt / totalAssets) * 100 : 0
+      
+      if (borrowUsed < 60) return { percentage: borrowUsed, color: 'text-green-600', label: 'Low Risk' }
+      if (borrowUsed < 85) return { percentage: borrowUsed, color: 'text-amber-600', label: 'Medium Risk' }
+      return { percentage: borrowUsed, color: 'text-red-600', label: 'High Risk' }
+    }
+
+    const borrowUsed = borrower.deepbookPosition.borrow_usage
+    if (borrowUsed < 60) return { percentage: borrowUsed, color: 'text-green-600', label: 'Low Risk' }
+    if (borrowUsed < 85) return { percentage: borrowUsed, color: 'text-amber-600', label: 'Medium Risk' }
+    return { percentage: borrowUsed, color: 'text-red-600', label: 'High Risk' }
+  }
+
+  const calculateHealthFactor = (borrower: BorrowerData): { value: string; tooltip?: string } => {
+    if (borrower.deepbookPosition) {
+      return { value: `${borrower.deepbookPosition.health_factor.toFixed(2)}x` }
+    }
+
+    // Fallback calculation: HF = Borrow Limit / Borrow Value
+    const totalAssets = borrower.totalOutstandingDebt + (borrower.defaultSum || 0)
+    if (totalAssets === 0) {
+      return { value: '—', tooltip: 'No position data available' }
+    }
+
+    const healthFactor = totalAssets / Math.max(borrower.totalOutstandingDebt, 1)
+    return { value: `${healthFactor.toFixed(2)}x`, tooltip: 'Calculated from available data' }
+  }
+
+  const calculateLiquidationBuffer = (borrower: BorrowerData): { value: string; color: string } => {
+    if (!borrower.deepbookPosition) {
+      return { value: '—', color: 'text-gray-400' }
+    }
+
+    const buffer = borrower.deepbookPosition.distance_to_liquidation
+    if (buffer <= 5) return { value: `-${buffer.toFixed(1)}% to liq`, color: 'text-red-600' }
+    if (buffer <= 15) return { value: `-${buffer.toFixed(1)}% to liq`, color: 'text-amber-600' }
+    return { value: `-${buffer.toFixed(1)}% to liq`, color: 'text-green-600' }
+  }
+
+  const calculateInterest24h = (borrower: BorrowerData): string => {
+    if (!borrower.deepbookPosition) return '—'
+    return formatUSD(String(Math.round(borrower.deepbookPosition.daily_interest_cost_usd * 1000000000)))
+  }
+
   const SortableHeader = ({ field, children }: { field: keyof BorrowerData; children: React.ReactNode }) => (
     <th 
       className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider cursor-pointer hover:bg-muted/50"
@@ -315,42 +365,79 @@ export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersEx
         </div>
       </div>
 
-      {/* DeepBook v3 Status */}
+      {/* Enhanced DeepBook v3 Status Card */}
       {showDeepBookMetrics && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-center justify-between">
+        <div className="bg-slate-800/50 border border-slate-600/50 rounded-lg p-4 backdrop-blur-sm">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <span className="text-sm font-medium text-blue-800">DeepBook v3 Integration</span>
+              <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+              <span className="text-sm font-medium text-blue-300">DeepBook v3 Integration</span>
             </div>
             <button
               onClick={() => setShowDeepBookMetrics(false)}
-              className="text-blue-600 hover:text-blue-800 text-sm"
+              className="text-blue-400 hover:text-blue-300 text-sm transition-colors"
             >
               Hide
             </button>
           </div>
-          <div className="mt-2 text-sm text-blue-700">
-            {deepbookLoading ? 'Loading DeepBook v3 data...' : 
-             deepbookError ? `Error: ${deepbookError}` :
-             `Connected to ${positionSummaries.length} positions with real-time health metrics`}
+          
+          {/* Enhanced Metrics Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
+            <div>
+              <span className="text-blue-300 font-medium">Total Positions:</span> 
+              <span className="text-slate-200 ml-1">{dashboardMetrics?.total_positions || 0}</span>
+            </div>
+            <div>
+              <span className="text-blue-300 font-medium">At Risk:</span> 
+              <span className="text-slate-200 ml-1">{dashboardMetrics?.positions_at_risk || 0}</span>
+            </div>
+            <div>
+              <span className="text-blue-300 font-medium">Avg Health:</span> 
+              <span className="text-slate-200 ml-1">{dashboardMetrics?.average_health_factor.toFixed(2) || '0.00'}x</span>
+            </div>
+            <div>
+              <span className="text-blue-300 font-medium">Total Equity:</span> 
+              <span className="text-slate-200 ml-1">{dashboardMetrics ? formatUSD(String(Math.round(dashboardMetrics.total_net_equity_usd * 1000000000))) : '$0.00'}</span>
+            </div>
           </div>
-          {dashboardMetrics && (
-            <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-              <div>
-                <span className="text-blue-600 font-medium">Total Positions:</span> {dashboardMetrics.total_positions}
-              </div>
-              <div>
-                <span className="text-blue-600 font-medium">At Risk:</span> {dashboardMetrics.positions_at_risk}
-              </div>
-              <div>
-                <span className="text-blue-600 font-medium">Avg Health:</span> {dashboardMetrics.average_health_factor.toFixed(2)}x
-              </div>
-              <div>
-                <span className="text-blue-600 font-medium">Total Equity:</span> {formatUSD(String(Math.round(dashboardMetrics.total_net_equity_usd * 1000000000)))}
+
+          {/* New Enhanced Metrics Row */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm border-t border-slate-600/50 pt-3">
+            <div>
+              <span className="text-blue-300 font-medium">Oracle Freshness:</span>
+              <div className="text-slate-200">
+                {data?.last_updated ? 
+                  `${Math.round((Date.now() - data.last_updated) / 1000)}s ago` : 
+                  'Unknown'
+                }
               </div>
             </div>
-          )}
+            <div>
+              <span className="text-blue-300 font-medium">Weighted Borrow APR:</span>
+              <div className="text-slate-200">
+                {data?.margin_pools.length ? 
+                  `${(data.margin_pools.reduce((sum, pool) => sum + parseInt(pool.current_rate || '0'), 0) / data.margin_pools.length / 10000000).toFixed(2)}%` : 
+                  'N/A'
+                }
+              </div>
+            </div>
+            <div>
+              <span className="text-blue-300 font-medium">Encumbered (Orders):</span>
+              <div className="text-slate-200">$0.00</div>
+            </div>
+            <div>
+              <span className="text-blue-300 font-medium">Data Mode:</span>
+              <div className="text-slate-200">
+                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                  data?.data_source === 'static' ? 'bg-slate-700 text-slate-200 border border-slate-500' :
+                  data?.data_source === 'rpc' ? 'bg-emerald-700/50 text-emerald-300 border border-emerald-500/50' :
+                  'bg-blue-700/50 text-blue-300 border border-blue-500/50'
+                }`}>
+                  {data?.data_source?.toUpperCase() || 'UNKNOWN'}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -389,13 +476,13 @@ export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersEx
                 <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">BORROWER</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">POOL</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">LOAN AMOUNT</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">STATUS</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">BORROW USED %</th>
                 {showDeepBookMetrics && (
                   <>
                     <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">HEALTH FACTOR</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">NET EQUITY</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">BORROW USAGE</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">LIQUIDATION RISK</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">INTEREST (24H)</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">LIQ BUFFER</th>
                   </>
                 )}
                 <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">ACTIONS</th>
@@ -406,6 +493,12 @@ export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersEx
                 const isExpanded = expandedBorrower === borrower.managerId
                 const daysSinceFirstSeen = (Date.now() - borrower.firstSeen) / (1000 * 60 * 60 * 24)
                 const daysSinceLastActivity = (Date.now() - borrower.lastActivity) / (1000 * 60 * 60 * 24)
+
+                // Calculate enhanced metrics
+                const borrowUsed = calculateBorrowUsed(borrower)
+                const healthFactor = calculateHealthFactor(borrower)
+                const liquidationBuffer = calculateLiquidationBuffer(borrower)
+                const interest24h = calculateInterest24h(borrower)
 
                 return (
                   <>
@@ -421,27 +514,32 @@ export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersEx
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-fg font-semibold">${(borrower.totalOutstandingDebt / 1000).toFixed(1)}K</td>
+                      {/* Borrow Used % - Replaces Status */}
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-fg">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          borrower.repayRatio > 0.8 ? 'bg-success-500/20 text-success-400 border border-success-500/30' :
-                          borrower.repayRatio > 0.5 ? 'bg-warning-500/20 text-warning-400 border border-warning-500/30' :
-                          'bg-destructive-500/20 text-destructive-400 border border-destructive-500/30'
-                        }`}>
-                          {(borrower.repayRatio * 100).toFixed(1)}%
-                        </span>
+                        <div className="flex flex-col">
+                          <span className={`font-semibold ${borrowUsed.color}`}>
+                            {borrowUsed.percentage.toFixed(1)}%
+                          </span>
+                          <span className="text-xs text-gray-500">{borrowUsed.label}</span>
+                        </div>
                       </td>
                       
                       {/* DeepBook v3 Metrics */}
                       {showDeepBookMetrics && (
                         <>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-fg">
-                            {borrower.deepbookPosition ? (
-                              <span className="font-semibold">
-                                {borrower.deepbookPosition.health_factor.toFixed(2)}x
-                              </span>
-                            ) : (
-                              <span className="text-gray-400">N/A</span>
-                            )}
+                            <div className="flex items-center space-x-1">
+                              <span className="font-semibold">{healthFactor.value}</span>
+                              {healthFactor.tooltip && (
+                                <div className="group relative">
+                                  <span className="text-gray-400 cursor-help">ⓘ</span>
+                                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                                    {healthFactor.tooltip}
+                                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-fg">
                             {borrower.deepbookPosition ? (
@@ -451,32 +549,23 @@ export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersEx
                                 {formatUSD(String(Math.round(borrower.deepbookPosition.net_equity_usd * 1000000000)))}
                               </span>
                             ) : (
-                              <span className="text-gray-400">N/A</span>
+                              <span className="text-gray-400">—</span>
                             )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-fg">
-                            {borrower.deepbookPosition ? (
-                              <span className="font-medium">
-                                {formatPercentage(String(Math.round(borrower.deepbookPosition.borrow_usage * 1000000000)))}
-                              </span>
-                            ) : (
-                              <span className="text-gray-400">N/A</span>
-                            )}
+                            <div className="flex flex-col">
+                              <span className="font-medium">{interest24h}</span>
+                              <span className="text-xs text-gray-500">est.</span>
+                            </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-fg">
-                            {borrower.deepbookPosition ? (
-                              <span
-                                className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full`}
-                                style={{
-                                  backgroundColor: getHealthStatusColor(borrower.deepbookPosition.health_status) + '20',
-                                  color: getHealthStatusColor(borrower.deepbookPosition.health_status)
-                                }}
-                              >
-                                {borrower.deepbookPosition.health_status}
-                              </span>
-                            ) : (
-                              <span className="text-gray-400">N/A</span>
-                            )}
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              liquidationBuffer.color === 'text-red-600' ? 'bg-red-100 text-red-800' :
+                              liquidationBuffer.color === 'text-amber-600' ? 'bg-amber-100 text-amber-800' :
+                              'bg-green-100 text-green-800'
+                            }`}>
+                              {liquidationBuffer.value}
+                            </span>
                           </td>
                         </>
                       )}
@@ -546,6 +635,38 @@ export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersEx
                                   </div>
                                   <div>
                                     <span className="font-medium text-gray-600">Last Updated:</span> {new Date(borrower.deepbookPosition.last_updated).toLocaleString()}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Enhanced Risk Metrics */}
+                            {showDeepBookMetrics && (
+                              <div>
+                                <h4 className="text-sm font-semibold text-fg mb-2">Risk Analysis</h4>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                  <div>
+                                    <span className="font-medium text-blue-600">Borrow Used:</span> 
+                                    <span className={`ml-2 ${borrowUsed.color}`}>
+                                      {borrowUsed.percentage.toFixed(1)}% ({borrowUsed.label})
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium text-green-600">Health Factor:</span> 
+                                    <span className="ml-2">{healthFactor.value}</span>
+                                    {healthFactor.tooltip && (
+                                      <span className="ml-1 text-gray-400">ⓘ</span>
+                                    )}
+                                  </div>
+                                  <div>
+                                    <span className="font-medium text-orange-600">Liquidation Buffer:</span> 
+                                    <span className={`ml-2 ${liquidationBuffer.color}`}>
+                                      {liquidationBuffer.value}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium text-purple-600">24h Interest Cost:</span> 
+                                    <span className="ml-2">{interest24h}</span>
                                   </div>
                                 </div>
                               </div>
