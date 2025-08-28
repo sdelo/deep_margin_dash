@@ -1,0 +1,24 @@
+# DeepBook v3 Configuration
+# Copy this to your .env file and adjust values as needed
+
+# Data source type: 'static', 'rpc', or 'events'
+VITE_DEEPBOOK_DATA_SOURCE=static
+
+# RPC endpoint for when contracts are deployed
+VITE_DEEPBOOK_RPC_URL=https://fullnode.mainnet.sui.io:443
+
+# Path to static JSON file (relative to public directory)
+VITE_DEEPBOOK_STATIC_DATA_PATH=/data/deepbook-v3-data.json
+
+# Refresh interval in milliseconds (30 seconds default)
+VITE_DEEPBOOK_REFRESH_INTERVAL=30000
+
+# Enable real-time event updates (when available)
+VITE_DEEPBOOK_REAL_TIME_UPDATES=false
+
+# Example .env file:
+# VITE_DEEPBOOK_DATA_SOURCE=static
+# VITE_DEEPBOOK_RPC_URL=https://fullnode.mainnet.sui.io:443
+# VITE_DEEPBOOK_STATIC_DATA_PATH=/data/deepbook-v3-data.json
+# VITE_DEEPBOOK_REFRESH_INTERVAL=30000
+# VITE_DEEPBOOK_REAL_TIME_UPDATES=false

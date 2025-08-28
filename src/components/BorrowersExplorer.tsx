@@ -1,6 +1,9 @@
 import { useState, useMemo } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import type { MarginManager, MarginLoan, MarginLiquidation } from '../services/api'
+import { useDeepBookData } from '../hooks/useDeepBookData'
+import { formatUSD, formatPercentage, getHealthStatusColor } from '../utils/deepbookUtils'
+import type { PositionSummary } from '../types/deepbook'
 
 interface BorrowersExplorerProps {
   managers: MarginManager[]
@@ -21,6 +24,8 @@ interface BorrowerData {
   liquidationCount: number
   defaultSum: number
   repayRatio: number
+  // DeepBook v3 enhanced metrics
+  deepbookPosition?: PositionSummary
   events: Array<{
     type: 'created' | 'borrow' | 'repay' | 'liquidation'
     timestamp: number
@@ -41,6 +46,15 @@ export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersEx
   const [sortField, setSortField] = useState<keyof BorrowerData>('totalOutstandingDebt')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const [searchTerm, setSearchTerm] = useState('')
+  const [showDeepBookMetrics, setShowDeepBookMetrics] = useState(true)
+
+  // Get DeepBook v3 data
+  const { 
+    positionSummaries, 
+    dashboardMetrics, 
+    loading: deepbookLoading, 
+    error: deepbookError 
+  } = useDeepBookData()
 
   // Calculate borrower data with event-sourced positions
   const borrowersData = useMemo(() => {
@@ -142,6 +156,16 @@ export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersEx
       })
     })
 
+    // Enhance with DeepBook v3 data
+    if (positionSummaries.length > 0) {
+      positionSummaries.forEach(position => {
+        const borrower = borrowerMap.get(position.manager_id)
+        if (borrower) {
+          borrower.deepbookPosition = position
+        }
+      })
+    }
+
     // Calculate final metrics for each borrower
     borrowerMap.forEach(borrower => {
       // Calculate total outstanding debt
@@ -164,7 +188,7 @@ export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersEx
     })
 
     return Array.from(borrowerMap.values())
-  }, [managers, loans, liquidations])
+  }, [managers, loans, liquidations, positionSummaries])
 
   // Filter and sort borrowers
   const filteredAndSortedBorrowers = useMemo(() => {
@@ -284,14 +308,53 @@ export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersEx
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Borrowers Explorer</h2>
-          <p className="text-gray-600 mt-1">Position tracking by events & user profiles</p>
+          <p className="text-gray-600 mt-1">Position tracking by events & user profiles with DeepBook v3 metrics</p>
         </div>
         <div className="text-sm text-gray-500">
           {filteredAndSortedBorrowers.length} borrowers
         </div>
       </div>
 
-      {/* Search */}
+      {/* DeepBook v3 Status */}
+      {showDeepBookMetrics && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+              <span className="text-sm font-medium text-blue-800">DeepBook v3 Integration</span>
+            </div>
+            <button
+              onClick={() => setShowDeepBookMetrics(false)}
+              className="text-blue-600 hover:text-blue-800 text-sm"
+            >
+              Hide
+            </button>
+          </div>
+          <div className="mt-2 text-sm text-blue-700">
+            {deepbookLoading ? 'Loading DeepBook v3 data...' : 
+             deepbookError ? `Error: ${deepbookError}` :
+             `Connected to ${positionSummaries.length} positions with real-time health metrics`}
+          </div>
+          {dashboardMetrics && (
+            <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <span className="text-blue-600 font-medium">Total Positions:</span> {dashboardMetrics.total_positions}
+              </div>
+              <div>
+                <span className="text-blue-600 font-medium">At Risk:</span> {dashboardMetrics.positions_at_risk}
+              </div>
+              <div>
+                <span className="text-blue-600 font-medium">Avg Health:</span> {dashboardMetrics.average_health_factor.toFixed(2)}x
+              </div>
+              <div>
+                <span className="text-blue-600 font-medium">Total Equity:</span> {formatUSD(String(Math.round(dashboardMetrics.total_net_equity_usd * 1000000000)))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Search and Toggle */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="flex-1">
           <input
@@ -307,6 +370,14 @@ export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersEx
             }}
           />
         </div>
+        {!showDeepBookMetrics && (
+          <button
+            onClick={() => setShowDeepBookMetrics(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Show DeepBook v3 Metrics
+          </button>
+        )}
       </div>
 
       {/* Borrowers Table */}
@@ -319,9 +390,14 @@ export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersEx
                 <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">POOL</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">LOAN AMOUNT</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">STATUS</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">BORROWED AT</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">REPAID AT</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">HEALTH FACTOR</th>
+                {showDeepBookMetrics && (
+                  <>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">HEALTH FACTOR</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">NET EQUITY</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">BORROW USAGE</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">LIQUIDATION RISK</th>
+                  </>
+                )}
                 <th className="px-6 py-3 text-left text-xs font-medium text-fg/70 uppercase tracking-wider">ACTIONS</th>
               </tr>
             </thead>
@@ -354,12 +430,57 @@ export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersEx
                           {(borrower.repayRatio * 100).toFixed(1)}%
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-fg/90">{borrower.firstSeen}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-fg/90">{borrower.lastActivity}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-fg/90">{borrower.borrowCount}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-fg/90">{borrower.repayCount}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-fg/90">{borrower.liquidationCount}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-fg/90">${(borrower.defaultSum / 1000).toFixed(1)}K</td>
+                      
+                      {/* DeepBook v3 Metrics */}
+                      {showDeepBookMetrics && (
+                        <>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-fg">
+                            {borrower.deepbookPosition ? (
+                              <span className="font-semibold">
+                                {borrower.deepbookPosition.health_factor.toFixed(2)}x
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">N/A</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-fg">
+                            {borrower.deepbookPosition ? (
+                              <span className={`font-semibold ${
+                                borrower.deepbookPosition.net_equity_usd >= 0 ? 'text-green-600' : 'text-red-600'
+                              }`}>
+                                {formatUSD(String(Math.round(borrower.deepbookPosition.net_equity_usd * 1000000000)))}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">N/A</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-fg">
+                            {borrower.deepbookPosition ? (
+                              <span className="font-medium">
+                                {formatPercentage(String(Math.round(borrower.deepbookPosition.borrow_usage * 1000000000)))}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">N/A</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-fg">
+                            {borrower.deepbookPosition ? (
+                              <span
+                                className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full`}
+                                style={{
+                                  backgroundColor: getHealthStatusColor(borrower.deepbookPosition.health_status) + '20',
+                                  color: getHealthStatusColor(borrower.deepbookPosition.health_status)
+                                }}
+                              >
+                                {borrower.deepbookPosition.health_status}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">N/A</span>
+                            )}
+                          </td>
+                        </>
+                      )}
+                      
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-fg/90">
                         <button
                           onClick={(e) => {
@@ -376,7 +497,7 @@ export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersEx
                     {/* Expanded Row Details */}
                     {isExpanded && (
                       <tr>
-                        <td colSpan={12} className="px-6 py-4 bg-muted/30">
+                        <td colSpan={showDeepBookMetrics ? 9 : 5} className="px-6 py-4 bg-muted/30">
                           <div className="space-y-4">
                             <div>
                               <h4 className="text-sm font-semibold text-fg mb-2">Event Timeline</h4>
@@ -396,6 +517,39 @@ export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersEx
                                 <span className="font-medium">Active for:</span> {daysSinceFirstSeen.toFixed(0)} days
                               </div>
                             </div>
+
+                            {/* DeepBook v3 Enhanced Details */}
+                            {showDeepBookMetrics && borrower.deepbookPosition && (
+                              <div>
+                                <h4 className="text-sm font-semibold text-fg mb-2">DeepBook v3 Position Details</h4>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                  <div>
+                                    <span className="font-medium text-blue-600">Base Assets:</span> {formatUSD(String(Math.round(borrower.deepbookPosition.base_asset_usd * 1000000000)))}
+                                  </div>
+                                  <div>
+                                    <span className="font-medium text-blue-600">Quote Assets:</span> {formatUSD(String(Math.round(borrower.deepbookPosition.quote_asset_usd * 1000000000)))}
+                                  </div>
+                                  <div>
+                                    <span className="font-medium text-red-600">Base Debt:</span> {formatUSD(String(Math.round(borrower.deepbookPosition.base_debt_usd * 1000000000)))}
+                                  </div>
+                                  <div>
+                                    <span className="font-medium text-red-600">Quote Debt:</span> {formatUSD(String(Math.round(borrower.deepbookPosition.quote_debt_usd * 1000000000)))}
+                                  </div>
+                                  <div>
+                                    <span className="font-medium text-green-600">Liquidation Threshold:</span> {borrower.deepbookPosition.liquidation_threshold.toFixed(2)}x
+                                  </div>
+                                  <div>
+                                    <span className="font-medium text-orange-600">Distance to Liquidation:</span> {borrower.deepbookPosition.distance_to_liquidation.toFixed(1)}%
+                                  </div>
+                                  <div>
+                                    <span className="font-medium text-purple-600">Daily Interest Cost:</span> {formatUSD(String(Math.round(borrower.deepbookPosition.daily_interest_cost_usd * 1000000000)))}
+                                  </div>
+                                  <div>
+                                    <span className="font-medium text-gray-600">Last Updated:</span> {new Date(borrower.deepbookPosition.last_updated).toLocaleString()}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </td>
                       </tr>
