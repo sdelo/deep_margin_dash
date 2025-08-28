@@ -16,7 +16,7 @@ export interface DeepBookDataSourceConfig {
 // Default configuration
 const DEFAULT_CONFIG: DeepBookDataSourceConfig = {
     type: 'static',
-    staticDataPath: '/data/deepbook-v3-data.json',
+    staticDataPath: undefined, // No default static file path
     refreshInterval: 30000, // 30 seconds
     enableRealTimeUpdates: false
 }
@@ -127,7 +127,9 @@ class DeepBookDataService {
 
     private async fetchFromStaticFile(): Promise<DeepBookV3Data> {
         if (!this.config.staticDataPath) {
-            throw new Error('Static data path not configured')
+            // No static file configured, use sample data directly
+            console.log('No static file path configured, using sample data')
+            return sampleDeepBookV3Data
         }
 
         try {

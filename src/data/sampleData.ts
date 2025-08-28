@@ -6,10 +6,10 @@ import type { DeepBookV3Data } from '../types/deepbook'
 export const sampleDeepBookV3Data: DeepBookV3Data = {
     margin_managers: [
         {
-            id: "0x1::margin_manager::MarginManager<0x2::sui::SUI, 0x2::usdc::USDC>",
-            balance_manager_id: "0x2::balance_manager::BalanceManager<0x2::sui::SUI, 0x2::usdc::USDC>",
-            margin_pool_id: "0x1::margin_pool::MarginPool<0x2::sui::SUI>",
-            owner: "0x1234567890abcdef1234567890abcdef12345678",
+            id: "manager_001",
+            balance_manager_id: "balance_001",
+            margin_pool_id: "pool_001",
+            owner: "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6",
             created_at: 1704067200000, // Jan 1, 2024
             manager_info: {
                 base: {
@@ -36,10 +36,10 @@ export const sampleDeepBookV3Data: DeepBookV3Data = {
             health_status: "healthy"
         },
         {
-            id: "0x1::margin_manager::MarginManager<0x2::sui::SUI, 0x2::usdc::USDC>",
-            balance_manager_id: "0x2::balance_manager::BalanceManager<0x2::sui::SUI, 0x2::usdc::USDC>",
-            margin_pool_id: "0x1::margin_pool::MarginPool<0x2::sui::SUI>",
-            owner: "0xabcdef1234567890abcdef1234567890abcdef12",
+            id: "manager_002",
+            balance_manager_id: "balance_002",
+            margin_pool_id: "pool_002",
+            owner: "0x8ba1f109551bD432803012645Hac136c772c3c2c",
             created_at: 1704153600000, // Jan 2, 2024
             manager_info: {
                 base: {
@@ -66,10 +66,10 @@ export const sampleDeepBookV3Data: DeepBookV3Data = {
             health_status: "warning"
         },
         {
-            id: "0x1::margin_manager::MarginManager<0x2::sui::SUI, 0x2::usdc::USDC>",
-            balance_manager_id: "0x2::balance_manager::BalanceManager<0x2::sui::SUI, 0x2::usdc::USDC>",
-            margin_pool_id: "0x1::margin_pool::MarginPool<0x2::sui::SUI>",
-            owner: "0x7890abcdef1234567890abcdef1234567890abcd",
+            id: "manager_003",
+            balance_manager_id: "balance_003",
+            margin_pool_id: "pool_003",
+            owner: "0x1234567890123456789012345678901234567890",
             created_at: 1704240000000, // Jan 3, 2024
             manager_info: {
                 base: {
