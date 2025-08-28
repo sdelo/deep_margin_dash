@@ -1,9 +1,11 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 import type { MarginManager, MarginLoan, MarginLiquidation } from '../services/api'
 import { useDeepBookData } from '../hooks/useDeepBookData'
 import { formatUSD, formatPercentage, getHealthStatusColor } from '../utils/deepbookUtils'
 import type { PositionSummary } from '../types/deepbook'
+import { PriceLiquidationChart } from './PriceLiquidationChart'
+import pythPriceService from '../services/pythPriceService'
 
 
 
@@ -65,10 +67,13 @@ function InfoTooltip({ children, content }: InfoTooltipProps) {
 interface PortfolioPriceRiskAnalysisProps {
   positionSummaries: PositionSummary[]
   showDeepBookMetrics: boolean
+  selectedPoolId: string
+  selectedPriceChange: number
+  setSelectedPriceChange: (value: number) => void
+  currentSuiPrice: number
 }
 
-function PortfolioPriceRiskAnalysis({ positionSummaries, showDeepBookMetrics }: PortfolioPriceRiskAnalysisProps) {
-  const [selectedPriceChange, setSelectedPriceChange] = useState<number>(-3)
+function PortfolioPriceRiskAnalysis({ positionSummaries, showDeepBookMetrics, selectedPoolId, selectedPriceChange, setSelectedPriceChange, currentSuiPrice }: PortfolioPriceRiskAnalysisProps) {
   const [customPriceChange, setCustomPriceChange] = useState<string>('-3')
 
   if (!showDeepBookMetrics || positionSummaries.length === 0) {
@@ -241,124 +246,171 @@ function PortfolioPriceRiskAnalysis({ positionSummaries, showDeepBookMetrics }: 
         </div>
       </div>
 
-      {/* Portfolio Risk Summary */}
-      <div className={`p-4 rounded-lg border ${
-        riskAfterChange.isLiquidatable 
-          ? 'bg-red-900/30 border-red-600/50 text-red-200' 
-          : riskAfterChange.isAtRisk
-          ? 'bg-orange-900/30 border-orange-600/50 text-orange-200'
-          : 'bg-slate-700/30 border-slate-600/50 text-slate-200'
-      }`}>
-        <div className="text-lg font-medium mb-2">
-          {riskAfterChange.isLiquidatable ? (
-            <span className="text-red-300">🚨 PORTFOLIO LIQUIDATION RISK!</span>
-          ) : riskAfterChange.isAtRisk ? (
-            <span className="text-orange-300">⚠️ PORTFOLIO HIGH RISK</span>
-          ) : (
-            <span className="text-green-300">✅ PORTFOLIO SAFE</span>
-          )}
+      {/* Portfolio Risk Summary and Price Card - Side by Side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Portfolio Risk Summary */}
+        <div className={`p-4 rounded-lg border ${
+          riskAfterChange.isLiquidatable 
+            ? 'bg-red-900/30 border-red-600/50 text-red-200' 
+            : riskAfterChange.isAtRisk
+            ? 'bg-orange-900/30 border-orange-600/50 text-orange-200'
+            : 'bg-slate-700/30 border-slate-600/50 text-green-200'
+        }`}>
+          <div className="text-lg font-medium mb-2">
+            {riskAfterChange.isLiquidatable ? (
+              <span className="text-red-300">🚨 PORTFOLIO LIQUIDATION RISK!</span>
+            ) : riskAfterChange.isAtRisk ? (
+              <span className="text-orange-300">⚠️ PORTFOLIO HIGH RISK</span>
+            ) : (
+              <span className="text-green-300">✅ PORTFOLIO SAFE</span>
+            )}
+          </div>
+          <div className="text-sm">
+            If your main assets move {selectedPriceChange > 0 ? '+' : ''}{selectedPriceChange}%, 
+            your portfolio Health Factor {selectedPriceChange > 0 ? 'improves' : 'drops'} from {avgHealthFactor.toFixed(2)}x → {riskAfterChange.avgHealthFactor.toFixed(2)}x.
+            {riskAfterChange.isAtRisk && ` ${riskAfterChange.positionsAtRisk} positions would be at risk.`}
+          </div>
         </div>
-        <div className="text-sm">
-          If your main assets move {selectedPriceChange > 0 ? '+' : ''}{selectedPriceChange}%, 
-          your portfolio Health Factor {selectedPriceChange > 0 ? 'improves' : 'drops'} from {avgHealthFactor.toFixed(2)}x → {riskAfterChange.avgHealthFactor.toFixed(2)}x.
-          {riskAfterChange.isAtRisk && ` ${riskAfterChange.positionsAtRisk} positions would be at risk.`}
+
+        {/* Price at Selected Risk Level Card */}
+        <div className={`p-4 rounded-lg border ${
+          riskAfterChange.isLiquidatable 
+            ? 'bg-red-900/30 border-red-600/50 text-red-200' 
+            : riskAfterChange.isAtRisk
+            ? 'bg-orange-900/30 border-orange-600/50 text-orange-200'
+            : 'bg-slate-700/30 border-slate-600/50 text-green-200'
+        }`}>
+          <div className="text-center">
+            <div className="text-xs mb-2 opacity-80">Price at Selected Risk Level</div>
+            <div className={`text-2xl font-bold mb-1 ${
+              riskAfterChange.isLiquidatable 
+                ? 'text-red-300' 
+                : riskAfterChange.isAtRisk
+                ? 'text-orange-300'
+                : 'text-green-300'
+            }`}>
+              ${(currentSuiPrice * (1 + selectedPriceChange / 100)).toFixed(2)}
+            </div>
+            <div className="text-sm opacity-80">
+              {selectedPriceChange > 0 ? '+' : ''}{selectedPriceChange}% from current
+            </div>
+            <div className="text-xs opacity-60 mt-1">
+              Base: ${currentSuiPrice.toFixed(2)}
+            </div>
+          </div>
         </div>
+
+
       </div>
 
-      {/* Portfolio Risk Chart */}
-      <div className="h-64 bg-slate-800/20 rounded-lg p-4 border border-slate-600/30">
-        <div className="text-xs text-slate-400 mb-2 text-center">
-          💡 <strong>Target Risk Factor (1.10x):</strong> When positions are liquidated, collateral is sold to restore them to this health level
+
+
+      {/* Portfolio Risk Charts - Split Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left: Portfolio Risk Chart */}
+        <div className="h-64 bg-slate-800/20 rounded-lg p-4 border border-slate-600/30">
+          <div className="text-xs text-slate-400 mb-2 text-center">
+            💡 <strong>Target Risk Factor (1.10x):</strong> When positions are liquidated, collateral is sold to restore them to this health level
+          </div>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
+              <XAxis 
+                dataKey="priceChange" 
+                tick={{ fontSize: 12, fill: '#94a3b8' }}
+                tickFormatter={(value) => `${value > 0 ? '+' : ''}${value}%`}
+                domain={[-40, 40]}
+                ticks={[-40, -30, -20, -10, 0, 10, 20, 30, 40]}
+              />
+              <YAxis 
+                tick={{ fontSize: 12, fill: '#94a3b8' }}
+                domain={[0.5, Math.max(2.5, avgHealthFactor + 0.5)]}
+              />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: '#1e293b', 
+                  border: '1px solid #475569',
+                  borderRadius: '8px',
+                  color: '#e2e8f0'
+                }}
+                labelFormatter={(value) => `Price Change: ${value > 0 ? '+' : ''}${value}%`}
+                formatter={(value: any, name: any, props: any) => {
+                  if (name === 'avgHealthFactor') {
+                    return [`${value.toFixed(2)}x`, 'Health Factor']
+                  } else if (name === 'liquidationThreshold') {
+                    return ['1.00x', 'Liquidation Threshold']
+                  } else if (name === 'targetRiskFactor') {
+                    return [`${targetRiskFactor.toFixed(2)}x`, 'Target Risk Factor']
+                  } else if (name === 'currentPosition') {
+                    return [`${avgHealthFactor.toFixed(2)}x`, 'Current Position']
+                  }
+                  return [value, name]
+                }}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="avgHealthFactor" 
+                stroke="#3b82f6" 
+                strokeWidth={4}
+                dot={false}
+                activeDot={{ r: 6, fill: '#3b82f6' }}
+              />
+              {/* Liquidation threshold line */}
+              <Line 
+                type="monotone" 
+                dataKey="liquidationThreshold" 
+                stroke="#ef4444" 
+                strokeWidth={3}
+                strokeDasharray="0"
+              />
+              {/* Target risk factor line (where liquidated positions are restored to) */}
+              <Line 
+                type="monotone" 
+                dataKey="targetRiskFactor" 
+                stroke="#8b5cf6" 
+                strokeWidth={3}
+                strokeDasharray="0"
+              />
+              {/* Current position marker */}
+              <Line 
+                type="monotone" 
+                dataKey="currentPosition" 
+                stroke="#10b981" 
+                strokeWidth={5}
+                strokeDasharray="0"
+              />
+              {/* Reference line for current slider position */}
+              <ReferenceLine
+                x={selectedPriceChange}
+                stroke="#f59e0b"
+                strokeWidth={3}
+                strokeDasharray="0"
+                label={{
+                  value: `${selectedPriceChange > 0 ? '+' : ''}${selectedPriceChange}%`,
+                  position: 'top',
+                  fill: '#f59e0b',
+                  fontSize: 12,
+                  fontWeight: 'bold'
+                }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+          <div className="text-sm text-slate-400 text-center mt-3">
+            <span className="inline-block w-5 h-1.5 bg-blue-500 mr-2 rounded"></span>Portfolio Health Factor
+            <span className="inline-block w-5 h-1.5 bg-red-500 mx-3"></span>Liquidation (1.0x)
+            <span className="inline-block w-5 h-1.5 bg-purple-500 mx-2 rounded"></span>Target Risk Factor
+            <span className="inline-block w-5 h-1.5 bg-green-500 mx-2 rounded"></span>Current Portfolio
+            <span className="inline-block w-5 h-1.5 bg-orange-500 mx-2 rounded"></span>Slider Position
+          </div>
         </div>
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
-            <XAxis 
-              dataKey="priceChange" 
-              tick={{ fontSize: 12, fill: '#94a3b8' }}
-              tickFormatter={(value) => `${value > 0 ? '+' : ''}${value}%`}
-              domain={[-40, 40]}
-              ticks={[-40, -30, -20, -10, 0, 10, 20, 30, 40]}
-            />
-            <YAxis 
-              tick={{ fontSize: 12, fill: '#94a3b8' }}
-              domain={[0.5, Math.max(2.5, avgHealthFactor + 0.5)]}
-            />
-            <Tooltip 
-              contentStyle={{ 
-                backgroundColor: '#1e293b', 
-                border: '1px solid #475569',
-                borderRadius: '8px',
-                color: '#e2e8f0'
-              }}
-              labelFormatter={(value) => `Price Change: ${value > 0 ? '+' : ''}${value}%`}
-              formatter={(value: any, name: any, props: any) => {
-                if (name === 'avgHealthFactor') {
-                  return [`${value.toFixed(2)}x`, 'Health Factor']
-                } else if (name === 'liquidationThreshold') {
-                  return ['1.00x', 'Liquidation Threshold']
-                } else if (name === 'targetRiskFactor') {
-                  return [`${targetRiskFactor.toFixed(2)}x`, 'Target Risk Factor']
-                } else if (name === 'currentPosition') {
-                  return [`${avgHealthFactor.toFixed(2)}x`, 'Current Position']
-                }
-                return [value, name]
-              }}
-            />
-            <Line 
-              type="monotone" 
-              dataKey="avgHealthFactor" 
-              stroke="#3b82f6" 
-              strokeWidth={4}
-              dot={false}
-              activeDot={{ r: 6, fill: '#3b82f6' }}
-            />
-            {/* Liquidation threshold line */}
-            <Line 
-              type="monotone" 
-              dataKey="liquidationThreshold" 
-              stroke="#ef4444" 
-              strokeWidth={3}
-              strokeDasharray="0"
-            />
-            {/* Target risk factor line (where liquidated positions are restored to) */}
-            <Line 
-              type="monotone" 
-              dataKey="targetRiskFactor" 
-              stroke="#8b5cf6" 
-              strokeWidth={3}
-              strokeDasharray="0"
-            />
-            {/* Current position marker */}
-            <Line 
-              type="monotone" 
-              dataKey="currentPosition" 
-              stroke="#10b981" 
-              strokeWidth={5}
-              strokeDasharray="0"
-            />
-            {/* Reference line for current slider position */}
-            <ReferenceLine
-              x={selectedPriceChange}
-              stroke="#f59e0b"
-              strokeWidth={3}
-              strokeDasharray="0"
-              label={{
-                value: `${selectedPriceChange > 0 ? '+' : ''}${selectedPriceChange}%`,
-                position: 'top',
-                fill: '#f59e0b',
-                fontSize: 12,
-                fontWeight: 'bold'
-              }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-        <div className="text-sm text-slate-400 text-center mt-3">
-          <span className="inline-block w-5 h-1.5 bg-blue-500 mr-2 rounded"></span>Portfolio Health Factor
-          <span className="inline-block w-5 h-1.5 bg-red-500 mx-3"></span>Liquidation (1.0x)
-          <span className="inline-block w-5 h-1.5 bg-purple-500 mx-2 rounded"></span>Target Risk Factor
-          <span className="inline-block w-5 h-1.5 bg-green-500 mx-2 rounded"></span>Current Portfolio
-          <span className="inline-block w-5 h-1.5 bg-orange-500 mx-2 rounded"></span>Slider Position
+
+        {/* Right: Price vs Liquidation Chart */}
+        <div className="h-64">
+          <PriceLiquidationChart
+            poolId={selectedPoolId}
+            selectedPriceChange={selectedPriceChange}
+            onPriceChange={setSelectedPriceChange}
+          />
         </div>
       </div>
     </div>
@@ -376,6 +428,10 @@ export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersEx
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const [searchTerm, setSearchTerm] = useState('')
   const [showDeepBookMetrics, setShowDeepBookMetrics] = useState(true)
+  const [selectedPoolId, setSelectedPoolId] = useState('pool_001')
+  const [selectedPriceChange, setSelectedPriceChange] = useState<number>(-3)
+  const [customPriceChange, setCustomPriceChange] = useState<string>('-3')
+  const [currentSuiPrice, setCurrentSuiPrice] = useState<number>(3.44)
 
   // Get DeepBook v3 data
   const { 
@@ -385,6 +441,23 @@ export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersEx
     error: deepbookError,
     data
   } = useDeepBookData()
+
+  // Fetch current SUI price from Pyth
+  useEffect(() => {
+    const fetchSuiPrice = async () => {
+      try {
+        const assetInfo = await pythPriceService.getAssetPriceInfo('sui_usdc', 0)
+        if (assetInfo) {
+          setCurrentSuiPrice(assetInfo.currentPrice)
+        }
+      } catch (error) {
+        console.error('Failed to fetch SUI price:', error)
+        // Keep default price if fetch fails
+      }
+    }
+    
+    fetchSuiPrice()
+  }, [])
 
   // Calculate borrower data with event-sourced positions
   const borrowersData = useMemo(() => {
@@ -823,10 +896,27 @@ export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersEx
             How Price Changes My Portfolio Risk
           </h3>
           
-          <PortfolioPriceRiskAnalysis 
-            positionSummaries={positionSummaries}
-            showDeepBookMetrics={showDeepBookMetrics}
-          />
+          {/* Pool Selector */}
+          <div className="flex items-center gap-4 mb-4">
+            <label className="text-sm text-slate-400">Asset Pool:</label>
+            <select
+              value={selectedPoolId}
+              onChange={(e) => setSelectedPoolId(e.target.value)}
+              className="px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-200 text-sm"
+            >
+              <option value="pool_001">SUI/USDC</option>
+              <option value="pool_002">WETH/USDC</option>
+            </select>
+          </div>
+          
+                  <PortfolioPriceRiskAnalysis 
+          positionSummaries={positionSummaries} 
+          showDeepBookMetrics={showDeepBookMetrics}
+          selectedPoolId={selectedPoolId}
+          selectedPriceChange={selectedPriceChange}
+          setSelectedPriceChange={setSelectedPriceChange}
+          currentSuiPrice={currentSuiPrice}
+        />
         </div>
       )}
 
