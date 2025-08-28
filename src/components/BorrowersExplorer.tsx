@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 import type { MarginManager, MarginLoan, MarginLiquidation } from '../services/api'
 import { useDeepBookData } from '../hooks/useDeepBookData'
 import { formatUSD, formatPercentage, getHealthStatusColor } from '../utils/deepbookUtils'
@@ -43,76 +43,90 @@ interface LoanBucket {
   pool: string
 }
 
-// Price Risk Analysis Component
-interface PriceRiskAnalysisProps {
-  borrower: BorrowerData
+// Simple Info Tooltip Component
+interface InfoTooltipProps {
+  children: React.ReactNode
+  content: string
+}
+
+function InfoTooltip({ children, content }: InfoTooltipProps) {
+  return (
+    <div className="relative group">
+      {children}
+      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900 text-slate-100 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+        {content}
+        <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-900"></div>
+      </div>
+    </div>
+  )
+}
+
+// Portfolio Price Risk Analysis Component
+interface PortfolioPriceRiskAnalysisProps {
+  positionSummaries: PositionSummary[]
   showDeepBookMetrics: boolean
 }
 
-function PriceRiskAnalysis({ borrower, showDeepBookMetrics }: PriceRiskAnalysisProps) {
+function PortfolioPriceRiskAnalysis({ positionSummaries, showDeepBookMetrics }: PortfolioPriceRiskAnalysisProps) {
   const [selectedPriceChange, setSelectedPriceChange] = useState<number>(-3)
   const [customPriceChange, setCustomPriceChange] = useState<string>('-3')
 
-  if (!showDeepBookMetrics || !borrower.deepbookPosition) {
+  if (!showDeepBookMetrics || positionSummaries.length === 0) {
     return null
   }
 
-  const position = borrower.deepbookPosition
-  const currentHF = position.health_factor
-  const currentBorrowUsed = position.borrow_usage
-  const currentLiqBuffer = position.distance_to_liquidation
+  // Calculate portfolio-level metrics
+  const totalAssetsUsd = positionSummaries.reduce((sum, pos) => sum + pos.base_asset_usd + pos.quote_asset_usd, 0)
+  const totalDebtUsd = positionSummaries.reduce((sum, pos) => sum + pos.base_debt_usd + pos.quote_debt_usd, 0)
+  const avgHealthFactor = positionSummaries.reduce((sum, pos) => sum + pos.health_factor, 0) / positionSummaries.length
+  const positionsAtRisk = positionSummaries.filter(pos => pos.health_status !== 'healthy').length
+  
+  // Target risk factor is typically set at pool level (e.g., 1.1x means liquidated positions are restored to 110% health)
+  const targetRiskFactor = 1.1
 
-  // Calculate risk metrics after price change
-  const calculateRiskAfterPriceChange = (priceChangePercent: number) => {
+  // Calculate portfolio risk after price change
+  const calculatePortfolioRiskAfterPriceChange = (priceChangePercent: number) => {
     // Simplified calculation: assume linear relationship for demo
-    // In reality, this would use the actual position math from DeepBook v3
     const priceMultiplier = 1 + (priceChangePercent / 100)
     
     // Adjust health factor based on price change
-    // This is a simplified model - real calculation would be more complex
-    const newHF = Math.max(0.1, currentHF * priceMultiplier)
+    const newAvgHF = Math.max(0.1, avgHealthFactor * priceMultiplier)
     
-    // Adjust borrow usage (inverse relationship with HF)
-    const newBorrowUsed = Math.min(100, currentBorrowUsed / priceMultiplier)
-    
-    // Adjust liquidation buffer
-    const newLiqBuffer = Math.max(0, currentLiqBuffer - Math.abs(priceChangePercent))
+    // Adjust risk count
+    const newPositionsAtRisk = priceChangePercent < 0 ? 
+      Math.min(positionSummaries.length, positionsAtRisk + Math.ceil(Math.abs(priceChangePercent) / 2)) :
+      Math.max(0, positionsAtRisk - Math.ceil(priceChangePercent / 3))
     
     return {
-      healthFactor: newHF,
-      borrowUsed: newBorrowUsed,
-      liquidationBuffer: newLiqBuffer,
-      isAtRisk: newHF < 1.1,
-      isLiquidatable: newHF < 1.0
+      avgHealthFactor: newAvgHF,
+      positionsAtRisk: newPositionsAtRisk,
+      isAtRisk: newAvgHF < 1.2,
+      isLiquidatable: newAvgHF < 1.0
     }
   }
 
-  const riskAfterChange = calculateRiskAfterPriceChange(selectedPriceChange)
+  const riskAfterChange = calculatePortfolioRiskAfterPriceChange(selectedPriceChange)
   
   // Generate data for the chart
-  const chartData = Array.from({ length: 41 }, (_, i) => {
-    const priceChange = (i - 20) // -20% to +20%
-    const risk = calculateRiskAfterPriceChange(priceChange)
+  const chartData = Array.from({ length: 81 }, (_, i) => {
+    const priceChange = (i - 40) // -40% to +40% for smoother curves
+    const risk = calculatePortfolioRiskAfterPriceChange(priceChange)
     return {
       priceChange,
-      healthFactor: risk.healthFactor,
-      borrowUsed: risk.borrowUsed,
-      liquidationBuffer: risk.liquidationBuffer
+      avgHealthFactor: risk.avgHealthFactor,
+      liquidationThreshold: 1.0,
+      targetRiskFactor: targetRiskFactor,
+      currentPosition: avgHealthFactor
     }
   })
 
   const quickPresets = [-5, -3, -1, 1, 3, 5]
 
   return (
-    <div className="bg-slate-800/30 border border-slate-600/30 rounded-lg p-4 mb-4">
-      <h4 className="text-sm font-semibold text-slate-200 mb-3 flex items-center">
-        <span className="text-orange-400 mr-2">⚠️</span>
-        How Price Changes My Risk
-      </h4>
-      
+    <div className="space-y-6">
       {/* Scenario Selection */}
-      <div className="mb-4">
-        <div className="flex flex-wrap gap-2 mb-3">
+      <div>
+        <div className="flex flex-wrap gap-2 mb-4">
           {quickPresets.map((preset) => (
             <button
               key={preset}
@@ -120,7 +134,7 @@ function PriceRiskAnalysis({ borrower, showDeepBookMetrics }: PriceRiskAnalysisP
                 setSelectedPriceChange(preset)
                 setCustomPriceChange(preset.toString())
               }}
-              className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+              className={`px-4 py-2 text-sm font-medium rounded-full transition-colors ${
                 selectedPriceChange === preset
                   ? 'bg-orange-500 text-white'
                   : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
@@ -131,117 +145,144 @@ function PriceRiskAnalysis({ borrower, showDeepBookMetrics }: PriceRiskAnalysisP
           ))}
         </div>
         
-        <div className="flex items-center gap-3">
-          <label className="text-xs text-slate-400">Custom:</label>
+        <div className="flex items-center gap-4">
+          <label className="text-sm text-slate-400">Custom Price Change:</label>
           <input
             type="range"
-            min="-20"
-            max="20"
+            min="-40"
+            max="40"
             value={selectedPriceChange}
             onChange={(e) => {
               const value = parseInt(e.target.value)
               setSelectedPriceChange(value)
               setCustomPriceChange(value.toString())
             }}
-            className="flex-1 h-2 bg-slate-600 rounded-lg appearance-none cursor-pointer slider"
+            className="flex-1 h-3 bg-slate-600 rounded-lg appearance-none cursor-pointer slider"
           />
           <input
             type="text"
             value={customPriceChange}
             onChange={(e) => {
-              const value = e.target.value
-              setCustomPriceChange(value)
-              const numValue = parseFloat(value)
-              if (!isNaN(numValue) && numValue >= -20 && numValue <= 20) {
-                setSelectedPriceChange(numValue)
+              const value = parseInt(e.target.value) || 0
+              setCustomPriceChange(e.target.value)
+              if (value >= -40 && value <= 40) {
+                setSelectedPriceChange(value)
               }
             }}
-            className="w-16 px-2 py-1 text-xs bg-slate-700 text-slate-200 rounded border border-slate-600 text-center"
+            className="w-20 px-3 py-1 text-sm bg-slate-700 border border-slate-600 rounded text-slate-200 text-center"
             placeholder="-3"
           />
-          <span className="text-xs text-slate-400">%</span>
+          <span className="text-sm text-slate-400">%</span>
         </div>
       </div>
 
-      {/* Risk Output Panel */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-        <div className="text-center">
-          <div className="text-xs text-slate-400 mb-1">Health Factor</div>
-          <div className="text-lg font-bold text-slate-200">
-            <span className={currentHF >= 1.1 ? 'text-green-400' : 'text-orange-400'}>
-              {currentHF.toFixed(2)}x
-            </span>
-            <span className="text-slate-400 mx-2">→</span>
-            <span className={riskAfterChange.healthFactor >= 1.1 ? 'text-green-400' : 'text-orange-400'}>
-              {riskAfterChange.healthFactor.toFixed(2)}x
+      {/* Portfolio Risk Output Panel */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-slate-700/50 rounded-lg p-4 relative group">
+          <div className="text-sm text-slate-400 mb-2 flex items-center">
+            Portfolio Health Factor
+            <InfoTooltip content="Total USD Assets ÷ Total USD Debt. Values above 1.0x mean you have more assets than debt.">
+              <span className="ml-1 text-slate-500 cursor-help">ⓘ</span>
+            </InfoTooltip>
+          </div>
+          <div className="text-2xl font-bold text-slate-200">
+            {avgHealthFactor.toFixed(2)}x → {riskAfterChange.avgHealthFactor.toFixed(2)}x
+          </div>
+          <div className="text-sm mt-1">
+            <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+              riskAfterChange.avgHealthFactor > 1.3 ? 'bg-green-900/50 text-green-300 border border-green-600/50' :
+              riskAfterChange.avgHealthFactor > 1.1 ? 'bg-amber-900/50 text-amber-300 border border-amber-600/50' :
+              'bg-red-900/50 text-red-300 border border-red-600/50'
+            }`}>
+              {riskAfterChange.avgHealthFactor > 1.3 ? 'Safe' :
+               riskAfterChange.avgHealthFactor > 1.1 ? 'Caution' : 'Danger'}
             </span>
           </div>
         </div>
         
-        <div className="text-center">
-          <div className="text-xs text-slate-400 mb-1">Borrow Used %</div>
-          <div className="text-lg font-bold text-slate-200">
-            <span className={currentBorrowUsed < 85 ? 'text-green-400' : 'text-orange-400'}>
-              {currentBorrowUsed.toFixed(1)}%
-            </span>
-            <span className="text-slate-400 mx-2">→</span>
-            <span className={riskAfterChange.borrowUsed < 85 ? 'text-green-400' : 'text-orange-400'}>
-              {riskAfterChange.borrowUsed.toFixed(1)}%
-            </span>
+        <div className="bg-slate-700/50 rounded-lg p-4 relative group">
+          <div className="text-sm text-slate-400 mb-2 flex items-center">
+            Positions at Risk
+            <InfoTooltip content="Number of positions with Health Factor below 1.2x (warning threshold). These positions are close to liquidation.">
+              <span className="ml-1 text-slate-500 cursor-help">ⓘ</span>
+            </InfoTooltip>
+          </div>
+          <div className="text-2xl font-bold text-slate-200">
+            {positionsAtRisk}
+          </div>
+          <div className="text-sm text-slate-400">
+            At Risk Now
+          </div>
+          <div className="text-lg font-bold text-slate-200 mt-2">
+            {riskAfterChange.positionsAtRisk}
+          </div>
+          <div className="text-sm text-slate-400">
+            At Risk if {selectedPriceChange > 0 ? '+' : ''}{selectedPriceChange}%
           </div>
         </div>
         
-        <div className="text-center">
-          <div className="text-xs text-slate-400 mb-1">Liq Buffer</div>
-          <div className="text-lg font-bold text-slate-200">
-            <span className={currentLiqBuffer > 15 ? 'text-green-400' : 'text-orange-400'}>
-              -{currentLiqBuffer.toFixed(1)}%
-            </span>
-            <span className="text-slate-400 mx-2">→</span>
-            <span className={riskAfterChange.liquidationBuffer > 15 ? 'text-green-400' : 'text-orange-400'}>
-              -{riskAfterChange.liquidationBuffer.toFixed(1)}%
-            </span>
+        <div className="bg-slate-700/50 rounded-lg p-4 relative group">
+          <div className="text-sm text-slate-400 mb-2 flex items-center">
+            Risk Level
+            <InfoTooltip content="SAFE: HF > 1.2x | HIGH: HF 1.0x-1.2x | CRITICAL: HF < 1.0x (liquidatable)">
+              <span className="ml-1 text-slate-500 cursor-help">ⓘ</span>
+            </InfoTooltip>
+          </div>
+          <div className={`text-2xl font-bold ${
+            riskAfterChange.isLiquidatable ? 'text-red-400' :
+            riskAfterChange.isAtRisk ? 'text-orange-400' : 'text-green-400'
+          }`}>
+            {riskAfterChange.isLiquidatable ? '🚨 CRITICAL' :
+             riskAfterChange.isAtRisk ? '⚠️ HIGH' : '✅ SAFE'}
+          </div>
+          <div className="text-xs text-slate-400 mt-2">
+            Liquidation likely below {selectedPriceChange < 0 ? Math.abs(selectedPriceChange) : 0}% price move
           </div>
         </div>
       </div>
 
-      {/* Risk Summary */}
-      <div className={`p-3 rounded-lg border ${
+      {/* Portfolio Risk Summary */}
+      <div className={`p-4 rounded-lg border ${
         riskAfterChange.isLiquidatable 
           ? 'bg-red-900/30 border-red-600/50 text-red-200' 
           : riskAfterChange.isAtRisk
           ? 'bg-orange-900/30 border-orange-600/50 text-orange-200'
           : 'bg-slate-700/30 border-slate-600/50 text-slate-200'
       }`}>
-        <div className="text-sm font-medium">
+        <div className="text-lg font-medium mb-2">
           {riskAfterChange.isLiquidatable ? (
-            <span className="text-red-300">🚨 LIQUIDATION RISK!</span>
+            <span className="text-red-300">🚨 PORTFOLIO LIQUIDATION RISK!</span>
           ) : riskAfterChange.isAtRisk ? (
-            <span className="text-orange-300">⚠️ HIGH RISK</span>
+            <span className="text-orange-300">⚠️ PORTFOLIO HIGH RISK</span>
           ) : (
-            <span className="text-green-300">✅ SAFE</span>
+            <span className="text-green-300">✅ PORTFOLIO SAFE</span>
           )}
         </div>
-        <div className="text-xs mt-1">
-          If {borrower.poolsUsed[0] || 'SUI'} moves {selectedPriceChange > 0 ? '+' : ''}{selectedPriceChange}%, 
-          your Health Factor {selectedPriceChange > 0 ? 'improves' : 'drops'} from {currentHF.toFixed(2)}x → {riskAfterChange.healthFactor.toFixed(2)}x.
-          {riskAfterChange.isAtRisk && ` You'd be within ${riskAfterChange.liquidationBuffer.toFixed(1)}% of liquidation.`}
+        <div className="text-sm">
+          If your main assets move {selectedPriceChange > 0 ? '+' : ''}{selectedPriceChange}%, 
+          your portfolio Health Factor {selectedPriceChange > 0 ? 'improves' : 'drops'} from {avgHealthFactor.toFixed(2)}x → {riskAfterChange.avgHealthFactor.toFixed(2)}x.
+          {riskAfterChange.isAtRisk && ` ${riskAfterChange.positionsAtRisk} positions would be at risk.`}
         </div>
       </div>
 
-      {/* Mini Chart */}
-      <div className="mt-4 h-32">
+      {/* Portfolio Risk Chart */}
+      <div className="h-64 bg-slate-800/20 rounded-lg p-4 border border-slate-600/30">
+        <div className="text-xs text-slate-400 mb-2 text-center">
+          💡 <strong>Target Risk Factor (1.10x):</strong> When positions are liquidated, collateral is sold to restore them to this health level
+        </div>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
             <XAxis 
               dataKey="priceChange" 
-              tick={{ fontSize: 10, fill: '#94a3b8' }}
+              tick={{ fontSize: 12, fill: '#94a3b8' }}
               tickFormatter={(value) => `${value > 0 ? '+' : ''}${value}%`}
+              domain={[-40, 40]}
+              ticks={[-40, -30, -20, -10, 0, 10, 20, 30, 40]}
             />
             <YAxis 
-              tick={{ fontSize: 10, fill: '#94a3b8' }}
-              domain={[0, Math.max(3, currentHF * 1.5)]}
+              tick={{ fontSize: 12, fill: '#94a3b8' }}
+              domain={[0.5, Math.max(2.5, avgHealthFactor + 0.5)]}
             />
             <Tooltip 
               contentStyle={{ 
@@ -251,43 +292,83 @@ function PriceRiskAnalysis({ borrower, showDeepBookMetrics }: PriceRiskAnalysisP
                 color: '#e2e8f0'
               }}
               labelFormatter={(value) => `Price Change: ${value > 0 ? '+' : ''}${value}%`}
-              formatter={(value: any) => [`HF: ${value.toFixed(2)}x`, 'Health Factor']}
+              formatter={(value: any, name: any, props: any) => {
+                if (name === 'avgHealthFactor') {
+                  return [`${value.toFixed(2)}x`, 'Health Factor']
+                } else if (name === 'liquidationThreshold') {
+                  return ['1.00x', 'Liquidation Threshold']
+                } else if (name === 'targetRiskFactor') {
+                  return [`${targetRiskFactor.toFixed(2)}x`, 'Target Risk Factor']
+                } else if (name === 'currentPosition') {
+                  return [`${avgHealthFactor.toFixed(2)}x`, 'Current Position']
+                }
+                return [value, name]
+              }}
             />
             <Line 
               type="monotone" 
-              dataKey="healthFactor" 
+              dataKey="avgHealthFactor" 
               stroke="#3b82f6" 
-              strokeWidth={2}
+              strokeWidth={4}
               dot={false}
+              activeDot={{ r: 6, fill: '#3b82f6' }}
             />
             {/* Liquidation threshold line */}
             <Line 
               type="monotone" 
               dataKey="liquidationThreshold" 
               stroke="#ef4444" 
-              strokeWidth={1}
-              strokeDasharray="5 5"
-              data={chartData.map(() => ({ priceChange: 0, liquidationThreshold: 1.0 }))}
+              strokeWidth={3}
+              strokeDasharray="0"
+            />
+            {/* Target risk factor line (where liquidated positions are restored to) */}
+            <Line 
+              type="monotone" 
+              dataKey="targetRiskFactor" 
+              stroke="#8b5cf6" 
+              strokeWidth={3}
+              strokeDasharray="0"
             />
             {/* Current position marker */}
             <Line 
               type="monotone" 
               dataKey="currentPosition" 
               stroke="#10b981" 
+              strokeWidth={5}
+              strokeDasharray="0"
+            />
+            {/* Reference line for current slider position */}
+            <ReferenceLine
+              x={selectedPriceChange}
+              stroke="#f59e0b"
               strokeWidth={3}
-              data={chartData.map(() => ({ priceChange: 0, currentPosition: currentHF }))}
+              strokeDasharray="0"
+              label={{
+                value: `${selectedPriceChange > 0 ? '+' : ''}${selectedPriceChange}%`,
+                position: 'top',
+                fill: '#f59e0b',
+                fontSize: 12,
+                fontWeight: 'bold'
+              }}
             />
           </LineChart>
         </ResponsiveContainer>
-        <div className="text-xs text-slate-400 text-center mt-2">
-          <span className="inline-block w-3 h-0.5 bg-blue-500 mr-1"></span>Health Factor
-          <span className="inline-block w-3 h-0.5 bg-red-500 mx-2 border-dashed"></span>Liquidation (1.0x)
-          <span className="inline-block w-3 h-0.5 bg-green-500 mx-2"></span>Current Position
+        <div className="text-sm text-slate-400 text-center mt-3">
+          <span className="inline-block w-5 h-1.5 bg-blue-500 mr-2 rounded"></span>Portfolio Health Factor
+          <span className="inline-block w-5 h-1.5 bg-red-500 mx-3"></span>Liquidation (1.0x)
+          <span className="inline-block w-5 h-1.5 bg-purple-500 mx-2 rounded"></span>Target Risk Factor
+          <span className="inline-block w-5 h-1.5 bg-green-500 mx-2 rounded"></span>Current Portfolio
+          <span className="inline-block w-5 h-1.5 bg-orange-500 mx-2 rounded"></span>Slider Position
         </div>
       </div>
     </div>
   )
 }
+
+
+
+
+
 
 export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersExplorerProps) {
   const [expandedBorrower, setExpandedBorrower] = useState<string | null>(null)
@@ -652,27 +733,39 @@ export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersEx
           
           {/* Enhanced Metrics Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
-            <div>
+            <div className="relative group">
               <span className="text-blue-300 font-medium">Total Positions:</span> 
               <span className="text-slate-200 ml-1">{dashboardMetrics?.total_positions || 0}</span>
+              <InfoTooltip content="Total number of active margin positions across all pools">
+                <span className="absolute top-0 right-0 text-slate-500 cursor-help">ⓘ</span>
+              </InfoTooltip>
             </div>
-            <div>
+            <div className="relative group">
               <span className="text-blue-300 font-medium">At Risk:</span> 
               <span className="text-slate-200 ml-1">{dashboardMetrics?.positions_at_risk || 0}</span>
+              <InfoTooltip content="Positions with Health Factor below 1.2x (warning threshold)">
+                <span className="absolute top-0 right-0 text-slate-500 cursor-help">ⓘ</span>
+              </InfoTooltip>
             </div>
-            <div>
+            <div className="relative group">
               <span className="text-blue-300 font-medium">Avg Health:</span> 
               <span className="text-slate-200 ml-1">{dashboardMetrics?.average_health_factor.toFixed(2) || '0.00'}x</span>
+              <InfoTooltip content="Average Health Factor across all positions (Total Assets ÷ Total Debt)">
+                <span className="absolute top-0 right-0 text-slate-500 cursor-help">ⓘ</span>
+              </InfoTooltip>
             </div>
-            <div>
+            <div className="relative group">
               <span className="text-blue-300 font-medium">Total Equity:</span> 
               <span className="text-slate-200 ml-1">{dashboardMetrics ? formatUSD(String(Math.round(dashboardMetrics.total_net_equity_usd * 1000000000))) : '$0.00'}</span>
+              <InfoTooltip content="Total USD value of all assets minus total USD debt across all positions">
+                <span className="absolute top-0 right-0 text-slate-500 cursor-help">ⓘ</span>
+              </InfoTooltip>
             </div>
           </div>
 
           {/* New Enhanced Metrics Row */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm border-t border-slate-600/50 pt-3">
-            <div>
+            <div className="relative group">
               <span className="text-blue-300 font-medium">Oracle Freshness:</span>
               <div className="text-slate-200">
                 {data?.last_updated ? 
@@ -680,8 +773,11 @@ export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersEx
                   'Unknown'
                 }
               </div>
+              <InfoTooltip content="How recently the price oracle was updated. Fresh data is more reliable.">
+                <span className="absolute top-0 right-0 text-slate-500 cursor-help">ⓘ</span>
+              </InfoTooltip>
             </div>
-            <div>
+            <div className="relative group">
               <span className="text-blue-300 font-medium">Weighted Borrow APR:</span>
               <div className="text-slate-200">
                 {data?.margin_pools.length ? 
@@ -689,12 +785,18 @@ export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersEx
                   'N/A'
                 }
               </div>
+              <InfoTooltip content="Average annual interest rate across all borrowed assets, weighted by debt amount">
+                <span className="absolute top-0 right-0 text-slate-500 cursor-help">ⓘ</span>
+              </InfoTooltip>
             </div>
-            <div>
+            <div className="relative group">
               <span className="text-blue-300 font-medium">Encumbered (Orders):</span>
               <div className="text-slate-200">$0.00</div>
+              <InfoTooltip content="USD value of assets locked in pending orders (not available for liquidation)">
+                <span className="absolute top-0 right-0 text-slate-500 cursor-help">ⓘ</span>
+              </InfoTooltip>
             </div>
-            <div>
+            <div className="relative group">
               <span className="text-blue-300 font-medium">Data Mode:</span>
               <div className="text-slate-200">
                 <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -705,50 +807,26 @@ export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersEx
                   {data?.data_source?.toUpperCase() || 'UNKNOWN'}
                 </span>
               </div>
+              <InfoTooltip content="Current data source: STATIC (sample data), RPC (live blockchain), or EVENTS (real-time)">
+                <span className="absolute top-0 right-0 text-slate-500 cursor-help">ⓘ</span>
+              </InfoTooltip>
             </div>
           </div>
         </div>
       )}
 
-      {/* Global Price Risk Analysis */}
+      {/* Portfolio Price Risk Analysis */}
       {showDeepBookMetrics && dashboardMetrics && (
-        <div className="bg-slate-800/30 border border-slate-600/30 rounded-lg p-4">
-          <h4 className="text-sm font-semibold text-slate-200 mb-3 flex items-center">
-            <span className="text-orange-400 mr-2">📊</span>
-            Portfolio Risk Analysis
-          </h4>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <div>
-              <span className="text-slate-400">Avg Health Factor:</span>
-              <div className="text-slate-200 font-medium">
-                {dashboardMetrics.average_health_factor.toFixed(2)}x
-              </div>
-            </div>
-            <div>
-              <span className="text-slate-400">Positions at Risk:</span>
-              <div className="text-slate-200 font-medium">
-                {dashboardMetrics.positions_at_risk} / {dashboardMetrics.total_positions}
-              </div>
-            </div>
-            <div>
-              <span className="text-slate-400">Total Net Equity:</span>
-              <div className={`font-medium ${
-                dashboardMetrics.total_net_equity_usd >= 0 ? 'text-green-400' : 'text-red-400'
-              }`}>
-                {formatUSD(String(Math.round(dashboardMetrics.total_net_equity_usd * 1000000000)))}
-              </div>
-            </div>
-            <div>
-              <span className="text-slate-400">Risk Level:</span>
-              <div className={`font-medium ${
-                dashboardMetrics.positions_at_risk === 0 ? 'text-green-400' :
-                dashboardMetrics.positions_at_risk <= 1 ? 'text-yellow-400' : 'text-red-400'
-              }`}>
-                {dashboardMetrics.positions_at_risk === 0 ? 'Low' :
-                 dashboardMetrics.positions_at_risk <= 1 ? 'Medium' : 'High'}
-              </div>
-            </div>
-          </div>
+        <div className="bg-slate-800/30 border border-slate-600/30 rounded-lg p-6 mb-6">
+          <h3 className="text-xl font-semibold text-slate-200 mb-4 flex items-center">
+            <span className="text-orange-400 mr-3 text-2xl">⚠️</span>
+            How Price Changes My Portfolio Risk
+          </h3>
+          
+          <PortfolioPriceRiskAnalysis 
+            positionSummaries={positionSummaries}
+            showDeepBookMetrics={showDeepBookMetrics}
+          />
         </div>
       )}
 
@@ -950,8 +1028,7 @@ export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersEx
                               </div>
                             )}
 
-                            {/* Price Risk Analysis Widget */}
-                            <PriceRiskAnalysis key={`risk-${borrower.managerId}`} borrower={borrower} showDeepBookMetrics={showDeepBookMetrics} />
+
 
                             {/* Enhanced Risk Metrics */}
                             {showDeepBookMetrics && (
