@@ -94,11 +94,71 @@ export const sampleDeepBookV3Data: DeepBookV3Data = {
             borrow_usage: "5000000000",    // 500%
             distance_to_liquidation: "150000000", // 15%
             health_status: "danger"
+        },
+        {
+            id: "manager_004",
+            balance_manager_id: "balance_004",
+            margin_pool_id: "pool_001", // SUI/USDC pool
+            owner: "0xMultiPoolBorrower123456789012345678901234",
+            created_at: 1704326400000, // Jan 4, 2024
+            manager_info: {
+                base: {
+                    asset: "1500000000", // 1.5 SUI
+                    debt: "600000000",   // 0.6 SUI borrowed
+                    usd_asset: "3000000000", // $3.00
+                    usd_debt: "1200000000",  // $1.20
+                    liquidation_price: "1800000000" // $1.80
+                },
+                quote: {
+                    asset: "800000000",  // 0.8 USDC
+                    debt: "0",
+                    usd_asset: "800000000",  // $0.80
+                    usd_debt: "0",
+                    liquidation_price: "0"
+                },
+                risk_ratio: "1750000000", // 1.75 (healthy)
+                liquidation_threshold: "1200000000", // 1.2
+                max_leverage: "1000000000" // 1.0x
+            },
+            net_equity_usd: "2600000000", // $2.60
+            borrow_usage: "400000000",    // 40%
+            distance_to_liquidation: "550000000", // 55%
+            health_status: "healthy"
+        },
+        {
+            id: "manager_005",
+            balance_manager_id: "balance_005",
+            margin_pool_id: "pool_002", // WETH/USDC pool (same owner as manager_004)
+            owner: "0xMultiPoolBorrower123456789012345678901234",
+            created_at: 1704326400000, // Jan 4, 2024
+            manager_info: {
+                base: {
+                    asset: "100000000", // 0.1 WETH
+                    debt: "30000000",   // 0.03 WETH borrowed
+                    usd_asset: "2000000000", // $2.00
+                    usd_debt: "600000000",   // $0.60
+                    liquidation_price: "1800000000" // $1.80
+                },
+                quote: {
+                    asset: "500000000",  // 0.5 USDC
+                    debt: "0",
+                    usd_asset: "500000000",  // $0.50
+                    usd_debt: "0",
+                    liquidation_price: "0"
+                },
+                risk_ratio: "1550000000", // 1.55 (healthy)
+                liquidation_threshold: "1200000000", // 1.2
+                max_leverage: "1000000000" // 1.0x
+            },
+            net_equity_usd: "1900000000", // $1.90
+            borrow_usage: "300000000",    // 30%
+            distance_to_liquidation: "350000000", // 35%
+            health_status: "healthy"
         }
     ],
     margin_pools: [
         {
-            id: "0x1::margin_pool::MarginPool<0x2::sui::SUI>",
+            id: "pool_001", // SUI/USDC pool
             asset_type: "0x2::sui::SUI",
             total_supply: "10000000000", // 10 SUI
             total_borrow: "2300000000",  // 2.3 SUI
@@ -113,7 +173,22 @@ export const sampleDeepBookV3Data: DeepBookV3Data = {
             weekly_interest_cost_usd: "322000000" // $0.322
         },
         {
-            id: "0x1::margin_pool::MarginPool<0x2::usdc::USDC>",
+            id: "pool_002", // WETH/USDC pool
+            asset_type: "0x2::weth::WETH",
+            total_supply: "5000000000",  // 5 WETH
+            total_borrow: "800000000",   // 0.8 WETH borrowed
+            utilization_rate: "160000000", // 16%
+            base_rate: "50000000",       // 5% APY
+            base_slope: "100000000",     // 10% slope
+            optimal_utilization: "800000000", // 80%
+            excess_slope: "200000000",   // 20% excess slope
+            last_index_update_timestamp: 1704067200000,
+            current_rate: "58000000",    // 5.8% APY
+            daily_interest_cost_usd: "12800000", // $0.0128
+            weekly_interest_cost_usd: "89600000" // $0.0896
+        },
+        {
+            id: "pool_003", // USDC pool (for lending)
             asset_type: "0x2::usdc::USDC",
             total_supply: "5000000000",  // 5 USDC
             total_borrow: "0",           // 0 USDC borrowed

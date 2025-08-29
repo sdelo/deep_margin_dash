@@ -202,7 +202,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-bg">
+    <div className="min-h-screens">
       <AppHeader />
       
       {/* Main Content */}

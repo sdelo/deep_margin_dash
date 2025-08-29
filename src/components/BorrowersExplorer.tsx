@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
-import type { MarginManager, MarginLoan, MarginLiquidation } from '../services/api'
+import type { MarginLoan, MarginLiquidation } from '../services/api'
+import type { MarginManager } from '../types/deepbook'
 import { useDeepBookData } from '../hooks/useDeepBookData'
 import { formatUSD, formatPercentage, getHealthStatusColor } from '../utils/deepbookUtils'
 import type { PositionSummary } from '../types/deepbook'
@@ -71,9 +72,11 @@ interface PortfolioPriceRiskAnalysisProps {
   selectedPriceChange: number
   setSelectedPriceChange: (value: number) => void
   currentSuiPrice: number
+  expandedBorrower: string | null
+  marginManagers: MarginManager[]
 }
 
-function PortfolioPriceRiskAnalysis({ positionSummaries, showDeepBookMetrics, selectedPoolId, selectedPriceChange, setSelectedPriceChange, currentSuiPrice }: PortfolioPriceRiskAnalysisProps) {
+function PortfolioPriceRiskAnalysis({ positionSummaries, showDeepBookMetrics, selectedPoolId, selectedPriceChange, setSelectedPriceChange, currentSuiPrice, expandedBorrower, marginManagers }: PortfolioPriceRiskAnalysisProps) {
   const [customPriceChange, setCustomPriceChange] = useState<string>('-3')
 
   if (!showDeepBookMetrics || positionSummaries.length === 0) {
@@ -86,6 +89,19 @@ function PortfolioPriceRiskAnalysis({ positionSummaries, showDeepBookMetrics, se
   const avgHealthFactor = positionSummaries.reduce((sum, pos) => sum + pos.health_factor, 0) / positionSummaries.length
   const positionsAtRisk = positionSummaries.filter(pos => pos.health_status !== 'healthy').length
   
+  // Get selected borrower's health factor for more accurate risk analysis
+  const selectedBorrowerHealthFactor = expandedBorrower ? 
+    positionSummaries.find(pos => pos.manager_id === expandedBorrower)?.health_factor || avgHealthFactor :
+    avgHealthFactor
+  
+  // Detect unique pools for the selected borrower
+  const selectedBorrowerPools = expandedBorrower ? 
+    marginManagers
+      ?.filter((manager: MarginManager) => manager.owner === expandedBorrower)
+      ?.map((manager: MarginManager) => manager.margin_pool_id)
+      ?.filter((poolId: string | null, index: number, arr: (string | null)[]) => poolId && arr.indexOf(poolId) === index) || [selectedPoolId] :
+    [selectedPoolId]
+  
   // Target risk factor is typically set at pool level (e.g., 1.1x means liquidated positions are restored to 110% health)
   const targetRiskFactor = 1.1
 
@@ -95,7 +111,7 @@ function PortfolioPriceRiskAnalysis({ positionSummaries, showDeepBookMetrics, se
     const priceMultiplier = 1 + (priceChangePercent / 100)
     
     // Adjust health factor based on price change
-    const newAvgHF = Math.max(0.1, avgHealthFactor * priceMultiplier)
+    const newAvgHF = Math.max(0.1, selectedBorrowerHealthFactor * priceMultiplier)
     
     // Adjust risk count
     const newPositionsAtRisk = priceChangePercent < 0 ? 
@@ -121,7 +137,7 @@ function PortfolioPriceRiskAnalysis({ positionSummaries, showDeepBookMetrics, se
       avgHealthFactor: risk.avgHealthFactor,
       liquidationThreshold: 1.0,
       targetRiskFactor: targetRiskFactor,
-      currentPosition: avgHealthFactor
+      currentPosition: selectedBorrowerHealthFactor
     }
   })
 
@@ -300,7 +316,55 @@ function PortfolioPriceRiskAnalysis({ positionSummaries, showDeepBookMetrics, se
           </div>
         </div>
 
+        {/* Post-Liquidation Position Card */}
+        <div className="bg-slate-700/50 rounded-lg p-4 border border-slate-600/30">
+          <div className="text-center">
+            <div className="text-xs text-slate-400 mb-2">Post-Liquidation Position</div>
+            <div className="text-lg font-bold text-purple-300 mb-1">
+              {targetRiskFactor.toFixed(2)}x Health Factor
+            </div>
+            <div className="text-sm text-slate-400">
+              After liquidation, you'd be reset to {targetRiskFactor.toFixed(1)}x
+            </div>
+            <div className="text-xs text-slate-500 mt-1">
+              Protocol safety threshold
+            </div>
+          </div>
+        </div>
+      </div>
 
+      {/* Multi-Pool Detection */}
+      {selectedBorrowerPools.length > 1 && (
+        <div className="bg-blue-900/20 rounded-lg p-4 border border-blue-600/30">
+          <div className="text-center">
+            <div className="text-sm text-blue-300 mb-2">
+              🌐 <strong>Multi-Pool Borrower Detected!</strong>
+            </div>
+            <div className="text-xs text-blue-200 mb-3">
+              This borrower has positions in {selectedBorrowerPools.length} different pools:
+            </div>
+            <div className="flex flex-wrap justify-center gap-2">
+              {selectedBorrowerPools.map((poolId: string | null) => poolId && (
+                <div key={poolId} className="bg-blue-800/30 px-3 py-1 rounded-full text-xs text-blue-200 border border-blue-600/50">
+                  {poolId === 'pool_001' ? 'SUI/USDC' : 
+                   poolId === 'pool_002' ? 'WETH/USDC' : 
+                   poolId === 'pool_003' ? 'USDC' : poolId}
+                </div>
+              ))}
+            </div>
+            <div className="text-xs text-blue-300 mt-3">
+              💡 <strong>Coming Soon:</strong> Individual sliders for each pool to analyze risk per asset
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Implementation Status Note */}
+      <div className="bg-slate-800/20 rounded-lg p-3 border border-slate-600/30">
+        <div className="text-xs text-slate-400 text-center">
+          💡 <strong>Current Implementation:</strong> Single pool analysis for {expandedBorrower ? 'selected borrower' : 'portfolio average'}. 
+          Multi-pool sliders coming soon when pool_id data is available.
+        </div>
       </div>
 
 
@@ -324,7 +388,7 @@ function PortfolioPriceRiskAnalysis({ positionSummaries, showDeepBookMetrics, se
               />
               <YAxis 
                 tick={{ fontSize: 12, fill: '#94a3b8' }}
-                domain={[0.5, Math.max(2.5, avgHealthFactor + 0.5)]}
+                domain={[0.5, Math.max(2.5, selectedBorrowerHealthFactor + 0.5)]}
               />
               <Tooltip 
                 contentStyle={{ 
@@ -342,7 +406,7 @@ function PortfolioPriceRiskAnalysis({ positionSummaries, showDeepBookMetrics, se
                   } else if (name === 'targetRiskFactor') {
                     return [`${targetRiskFactor.toFixed(2)}x`, 'Target Risk Factor']
                   } else if (name === 'currentPosition') {
-                    return [`${avgHealthFactor.toFixed(2)}x`, 'Current Position']
+                    return [`${selectedBorrowerHealthFactor.toFixed(2)}x`, 'Current Position']
                   }
                   return [value, name]
                 }}
@@ -916,6 +980,8 @@ export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersEx
           selectedPriceChange={selectedPriceChange}
           setSelectedPriceChange={setSelectedPriceChange}
           currentSuiPrice={currentSuiPrice}
+          expandedBorrower={expandedBorrower}
+          marginManagers={data?.margin_managers || []}
         />
         </div>
       )}

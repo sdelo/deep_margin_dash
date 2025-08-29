@@ -83,13 +83,34 @@ export class PythPriceService {
             }
 
             // Return mock data for development/testing
-            return {
-                price: 3.44, // Mock SUI price - should match what's displayed
-                confidence: 0.002,
-                exponent: -8,
-                publishTime: Date.now(),
-                emaPrice: 3.44,
-                emaConfidence: 0.002
+            // Different mock prices for different assets
+            if (priceFeedId === '23d7315113f5b1d3ba7a83604c44b94d79f4fd69af77f804fc7f920a6dc65744') {
+                return {
+                    price: 3.44, // Mock SUI price
+                    confidence: 0.002,
+                    exponent: -8,
+                    publishTime: Date.now(),
+                    emaPrice: 3.44,
+                    emaConfidence: 0.002
+                }
+            } else if (priceFeedId === '0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace') {
+                return {
+                    price: 2000.00, // Mock WETH price
+                    confidence: 0.5,
+                    exponent: -8,
+                    publishTime: Date.now(),
+                    emaPrice: 2000.00,
+                    emaConfidence: 0.5
+                }
+            } else {
+                return {
+                    price: 3.44, // Default mock price
+                    confidence: 0.002,
+                    exponent: -8,
+                    publishTime: Date.now(),
+                    emaPrice: 3.44,
+                    emaConfidence: 0.002
+                }
             }
         }
     }
