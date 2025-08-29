@@ -3,16 +3,17 @@ import { useDeepBookData } from '../../hooks/useDeepBookData'
 import pythPriceService from '../../services/pythPriceService'
 import { BorrowersTable } from './BorrowersTable'
 import { PortfolioPriceRiskAnalysis } from './PortfolioPriceRiskAnalysis'
+import { PoolMetricsDashboard } from './PoolMetricsDashboard'
 import { calculateBorrowersData, filterAndSortBorrowers } from './utils'
-import type { BorrowersExplorerProps } from './types'
+import type { BorrowersExplorerProps, BorrowerData } from './types'
 
 export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersExplorerProps) {
   const [expandedBorrower, setExpandedBorrower] = useState<string | null>(null)
-  const [sortField, setSortField] = useState<keyof any>('totalOutstandingDebt')
+  const [sortField, setSortField] = useState<keyof BorrowerData>('totalOutstandingDebt')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const [searchTerm, setSearchTerm] = useState('')
   const [showDeepBookMetrics, setShowDeepBookMetrics] = useState(true)
-  const [selectedPoolId, setSelectedPoolId] = useState('pool_001')
+  const [selectedPoolId, setSelectedPoolId] = useState('')
   const [selectedPriceChange, setSelectedPriceChange] = useState<number>(-3)
   const [currentSuiPrice, setCurrentSuiPrice] = useState<number>(3.44)
 
@@ -52,7 +53,7 @@ export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersEx
     return filterAndSortBorrowers(borrowersData, searchTerm, sortField, sortDirection)
   }, [borrowersData, searchTerm, sortField, sortDirection])
 
-  const handleSort = (field: keyof any) => {
+  const handleSort = (field: keyof BorrowerData) => {
     if (field === sortField) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
     } else {
@@ -144,28 +145,49 @@ export function BorrowersExplorer({ managers, loans, liquidations }: BorrowersEx
             How Price Changes My Portfolio Risk
           </h3>
           
-          {/* Pool Selector */}
-          <div className="flex items-center gap-4 mb-4">
-            <label className="text-sm text-slate-400">Asset Pool:</label>
-            <select
-              value={selectedPoolId}
-              onChange={(e) => setSelectedPoolId(e.target.value)}
-              className="px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-200 text-sm"
-            >
-              <option value="pool_001">SUI/USDC</option>
-              <option value="pool_002">WETH/USDC</option>
-            </select>
-          </div>
+          {/* Enhanced Pool Information */}
+          {expandedBorrower && (
+            <div className="mb-6">
+              <div className="flex items-center gap-4 mb-4">
+                <label className="text-sm text-slate-400">Asset Pool:</label>
+                <span className="px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-200 text-sm">
+                  {data?.margin_managers?.find(manager => manager.id === expandedBorrower)?.margin_pool_id || 'Unknown Pool'}
+                </span>
+              </div>
+              
+              {/* Pool Metrics Dashboard */}
+              {(() => {
+                // Fix: Use manager.id instead of manager.owner for the lookup
+                const poolId = data?.margin_managers?.find(manager => manager.id === expandedBorrower)?.margin_pool_id || ''
+                console.log('BorrowersExplorer Debug:', {
+                  expandedBorrower,
+                  poolId,
+                  marginManagers: data?.margin_managers?.map(m => ({ id: m.id, owner: m.owner, margin_pool_id: m.margin_pool_id })),
+                  deepbookPools: data?.deepbook_pools?.map(p => p.id),
+                  marginPools: data?.margin_pools?.map(p => p.id)
+                })
+                return (
+                  <PoolMetricsDashboard
+                    selectedPoolId={poolId}
+                    deepbookPools={data?.deepbook_pools}
+                    marginPools={data?.margin_pools}
+                    currentSuiPrice={currentSuiPrice}
+                  />
+                )
+              })()}
+            </div>
+          )}
           
           <PortfolioPriceRiskAnalysis 
             positionSummaries={positionSummaries} 
             showDeepBookMetrics={showDeepBookMetrics}
-            selectedPoolId={selectedPoolId}
+            selectedPoolId={data?.margin_managers?.find(manager => manager.id === expandedBorrower)?.margin_pool_id || selectedPoolId}
             selectedPriceChange={selectedPriceChange}
             setSelectedPriceChange={setSelectedPriceChange}
             currentSuiPrice={currentSuiPrice}
             expandedBorrower={expandedBorrower}
             marginManagers={data?.margin_managers || []}
+            deepbookPools={data?.deepbook_pools}
           />
         </div>
       )}

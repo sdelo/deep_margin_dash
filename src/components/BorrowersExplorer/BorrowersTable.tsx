@@ -137,9 +137,19 @@ export function BorrowersTable({
                   >
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-fg font-medium">{borrower.owner}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-fg">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-brand-500/20 text-brand-400 border border-brand-500/30">
-                        {borrower.poolsUsed.join(', ')}
-                      </span>
+                      <div className="flex flex-col space-y-1">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-brand-500/20 text-brand-400 border border-brand-500/30">
+                          {borrower.poolsUsed.join(', ')}
+                        </span>
+                        {borrower.poolsUsed.length > 0 && (
+                          <div className="text-xs text-gray-500">
+                            Liq: {borrower.poolsUsed.map(pool => {
+                              // TODO: Get actual pool risk thresholds from deepbookPools
+                              return '1.2x'
+                            }).join(', ')}
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-fg font-semibold">${(borrower.totalOutstandingDebt / 1000).toFixed(1)}K</td>
                     {/* Borrow Used % - Replaces Status */}

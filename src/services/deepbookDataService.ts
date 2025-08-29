@@ -2,7 +2,7 @@
 // Handles data retrieval from static files, RPC calls, and future event streams
 // Follows the same pattern as your existing dataService.ts
 
-import type { DeepBookV3Data, PositionSummary, DashboardMetrics } from '../types/deepbook'
+import type { DeepBookV3Data, PositionSummary, DashboardMetrics, PoolRiskRatios, DeepBookPool } from '../types/deepbook'
 import { sampleDeepBookV3Data } from '../data/sampleData'
 
 export interface DeepBookDataSourceConfig {
@@ -103,6 +103,11 @@ class DeepBookDataService {
         }
     }
 
+    // Alias method for compatibility with App.tsx
+    async getDeepBookV3Data(): Promise<DeepBookV3Data> {
+        return this.getData()
+    }
+
     private async fetchFromRPC(): Promise<DeepBookV3Data> {
         if (!this.config.rpcUrl) {
             throw new Error('RPC URL not configured')
@@ -156,6 +161,7 @@ class DeepBookDataService {
         return {
             margin_managers: data.margin_managers || [],
             margin_pools: data.margin_pools || [],
+            deepbook_pools: data.deepbook_pools || [],
             position_health_events: data.position_health_events || [],
             interest_accrual_events: data.interest_accrual_events || [],
             liquidation_risk_alerts: data.liquidation_risk_alerts || [],
@@ -182,8 +188,8 @@ class DeepBookDataService {
             const liquidationThreshold = parseInt(manager.manager_info.liquidation_threshold) / 1000000000
 
             const netEquityUsd = baseAssetUsd + quoteAssetUsd - baseDebtUsd - quoteDebtUsd
-            const borrowUsage = (baseDebtUsd + quoteDebtUsd) / (baseAssetUsd + quoteAssetUsd)
-            const distanceToLiquidation = (healthFactor - liquidationThreshold) / liquidationThreshold
+            const borrowUsage = (baseAssetUsd + quoteAssetUsd) > 0 ? (baseDebtUsd + quoteDebtUsd) / (baseAssetUsd + quoteAssetUsd) : 0
+            const distanceToLiquidation = liquidationThreshold > 0 ? (healthFactor - liquidationThreshold) / liquidationThreshold : 0
 
             let healthStatus: 'healthy' | 'warning' | 'danger' | 'liquidatable' = 'healthy'
             if (healthFactor <= liquidationThreshold) {
@@ -208,9 +214,51 @@ class DeepBookDataService {
                 distance_to_liquidation: distanceToLiquidation,
                 daily_interest_cost_usd: 0, // TODO: Calculate from interest events
                 health_status: healthStatus,
-                last_updated: manager.created_at
+                last_updated: Date.now()
             }
         }).filter(Boolean) as PositionSummary[]
+    }
+
+    // Get pool risk thresholds for a specific pool
+    async getPoolRiskThresholds(poolId: string): Promise<PoolRiskRatios | null> {
+        const data = await this.getData()
+
+        // First try to find in deepbook_pools
+        const deepbookPool = data.deepbook_pools?.find(pool => pool.id === poolId)
+        if (deepbookPool) {
+            return deepbookPool.pool_config.risk_ratios
+        }
+
+        // Fallback to margin_pools if deepbook_pools not available
+        const marginPool = data.margin_pools?.find(pool => pool.id === poolId)
+        if (marginPool) {
+            // Return default risk thresholds if not available in margin_pools
+            // These should match the Move contract constants
+            return {
+                min_withdraw_risk_ratio: "2000000000", // 2.0x
+                min_borrow_risk_ratio: "1500000000",   // 1.5x
+                liquidation_risk_ratio: "1200000000",  // 1.2x
+                target_liquidation_risk_ratio: "1300000000" // 1.3x
+            }
+        }
+
+        return null
+    }
+
+    // Get all pool configurations
+    async getPoolConfigurations(): Promise<DeepBookPool[]> {
+        const data = await this.getData()
+        return data.deepbook_pools || []
+    }
+
+    // Get default risk thresholds (mirrors Move contract constants)
+    getDefaultRiskThresholds(): PoolRiskRatios {
+        return {
+            min_withdraw_risk_ratio: "2000000000", // 2.0x - MIN_WITHDRAW_RISK_RATIO
+            min_borrow_risk_ratio: "1500000000",   // 1.5x - MIN_BORROW_RISK_RATIO
+            liquidation_risk_ratio: "1200000000",  // 1.2x - LIQUIDATION_RISK_RATIO
+            target_liquidation_risk_ratio: "1300000000" // 1.3x - TARGET_LIQUIDATION_RISK_RATIO
+        }
     }
 
     async getDashboardMetrics(): Promise<DashboardMetrics> {

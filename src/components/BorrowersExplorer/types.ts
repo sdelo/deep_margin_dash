@@ -1,11 +1,10 @@
-import type { MarginLoan, MarginLiquidation } from '../../services/api'
-import type { MarginManager } from '../../types/deepbook'
+import type { MarginManager, DeepBookPool } from '../../types/deepbook'
 import type { PositionSummary } from '../../types/deepbook'
 
 export interface BorrowersExplorerProps {
   managers: MarginManager[]
-  loans: MarginLoan[]
-  liquidations: MarginLiquidation[]
+  loans: any[] // TODO: Convert from position_health_events
+  liquidations: any[] // TODO: Convert from liquidation_risk_alerts
 }
 
 export interface BorrowerData {
@@ -47,4 +46,5 @@ export interface PortfolioPriceRiskAnalysisProps {
   currentSuiPrice: number
   expandedBorrower: string | null
   marginManagers: MarginManager[]
+  deepbookPools?: DeepBookPool[] // Pool configurations with risk thresholds
 }

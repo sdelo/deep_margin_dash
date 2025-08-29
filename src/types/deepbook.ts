@@ -10,6 +10,35 @@ export interface PriceInfoObject {
     publish_time: number
 }
 
+// Pool Risk Thresholds - mirrors Move contract RiskRatios struct
+export interface PoolRiskRatios {
+    min_withdraw_risk_ratio: string // 9 decimal precision (e.g., "2000000000" = 2.0x)
+    min_borrow_risk_ratio: string   // 9 decimal precision (e.g., "1500000000" = 1.5x)
+    liquidation_risk_ratio: string  // 9 decimal precision (e.g., "1200000000" = 1.2x)
+    target_liquidation_risk_ratio: string // 9 decimal precision (e.g., "1300000000" = 1.3x)
+}
+
+// Pool Configuration - mirrors Move contract PoolConfig struct
+export interface PoolConfig {
+    base_margin_pool_id: string
+    quote_margin_pool_id: string
+    risk_ratios: PoolRiskRatios
+    user_liquidation_reward: string // 9 decimal precision (e.g., "50000000" = 5%)
+    pool_liquidation_reward: string // 9 decimal precision (e.g., "10000000" = 1%)
+    enabled: boolean
+}
+
+// DeepBook Pool with Risk Configuration
+export interface DeepBookPool {
+    id: string
+    pool_config: PoolConfig
+    // Additional pool metadata
+    base_asset_type?: string
+    quote_asset_type?: string
+    created_at?: number
+    last_updated?: number
+}
+
 export interface ManagerInfo {
     base: {
         asset: string // 9 decimal precision
@@ -132,6 +161,7 @@ export interface PriceImpactAnalysisEvent {
 export interface DeepBookV3Data {
     margin_managers: MarginManager[]
     margin_pools: MarginPool[]
+    deepbook_pools: DeepBookPool[] // Pool configurations with risk thresholds
     position_health_events: PositionHealthUpdateEvent[]
     interest_accrual_events: InterestAccrualEvent[]
     liquidation_risk_alerts: LiquidationRiskAlertEvent[]

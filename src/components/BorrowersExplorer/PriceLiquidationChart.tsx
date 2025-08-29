@@ -14,6 +14,20 @@ export function PriceLiquidationChart({
   selectedPriceChange, 
   onPriceChange 
 }: PriceLiquidationChartProps) {
+  // Chart constants
+  const CHART_CONSTANTS = {
+    RISK_LEVELS: {
+      SAFE: 1.0,
+      MEDIUM: 0.5,
+      DANGER: 0.1
+    },
+    PRICE_RANGE: {
+      LIQUIDATION_MULTIPLIER: 0.8,
+      CURRENT_MULTIPLIER: 1.2
+    },
+    DATA_POINTS: 100
+  }
+
   const [assetPriceInfo, setAssetPriceInfo] = useState<AssetPriceInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -46,17 +60,19 @@ export function PriceLiquidationChart({
     const targetPrice = assetPriceInfo.targetPrice
 
     // Create data points for the price range
-    for (let i = 0; i <= 100; i++) {
-      const price = liquidationPrice * 0.8 + (currentPrice * 1.2 - liquidationPrice * 0.8) * (i / 100)
+    for (let i = 0; i <= CHART_CONSTANTS.DATA_POINTS; i++) {
+      const price = liquidationPrice * CHART_CONSTANTS.PRICE_RANGE.LIQUIDATION_MULTIPLIER + 
+                   (currentPrice * CHART_CONSTANTS.PRICE_RANGE.CURRENT_MULTIPLIER - 
+                    liquidationPrice * CHART_CONSTANTS.PRICE_RANGE.LIQUIDATION_MULTIPLIER) * (i / CHART_CONSTANTS.DATA_POINTS)
       
       // Calculate risk level based on price (simplified risk model)
-      let riskLevel = 1.0
+      let riskLevel = CHART_CONSTANTS.RISK_LEVELS.SAFE
       if (price >= currentPrice) {
-        riskLevel = 1.0 // Safe when price is above current
+        riskLevel = CHART_CONSTANTS.RISK_LEVELS.SAFE // Safe when price is above current
       } else if (price >= liquidationPrice) {
-        riskLevel = 0.5 + 0.5 * ((price - liquidationPrice) / (currentPrice - liquidationPrice))
+        riskLevel = CHART_CONSTANTS.RISK_LEVELS.MEDIUM + CHART_CONSTANTS.RISK_LEVELS.MEDIUM * ((price - liquidationPrice) / (currentPrice - liquidationPrice))
       } else {
-        riskLevel = 0.1 // Very high risk below liquidation
+        riskLevel = CHART_CONSTANTS.RISK_LEVELS.DANGER // Very high risk below liquidation
       }
       
       data.push({
@@ -124,20 +140,20 @@ export function PriceLiquidationChart({
               tickFormatter={(value) => `$${value.toFixed(2)}`}
               domain={['dataMin', 'dataMax']}
               ticks={[
-                assetPriceInfo.liquidationPrice * 0.8,
+                assetPriceInfo.liquidationPrice * CHART_CONSTANTS.PRICE_RANGE.LIQUIDATION_MULTIPLIER,
                 assetPriceInfo.liquidationPrice,
                 assetPriceInfo.targetPrice,
                 assetPriceInfo.currentPrice,
-                assetPriceInfo.currentPrice * 1.2
+                assetPriceInfo.currentPrice * CHART_CONSTANTS.PRICE_RANGE.CURRENT_MULTIPLIER
               ].filter((price, index, arr) => 
-                price >= assetPriceInfo.liquidationPrice * 0.8 && 
-                price <= assetPriceInfo.currentPrice * 1.2
+                price >= assetPriceInfo.liquidationPrice * CHART_CONSTANTS.PRICE_RANGE.LIQUIDATION_MULTIPLIER && 
+                price <= assetPriceInfo.currentPrice * CHART_CONSTANTS.PRICE_RANGE.CURRENT_MULTIPLIER
               )}
             />
             <YAxis 
               tick={{ fontSize: 10, fill: '#94a3b8' }}
               domain={[0, 1]}
-              tickFormatter={(value) => value === 1 ? 'Safe' : value === 0.5 ? 'Risk' : value === 0.1 ? 'Danger' : ''}
+              tickFormatter={(value) => value === CHART_CONSTANTS.RISK_LEVELS.SAFE ? 'Safe' : value === CHART_CONSTANTS.RISK_LEVELS.MEDIUM ? 'Risk' : value === CHART_CONSTANTS.RISK_LEVELS.DANGER ? 'Danger' : ''}
             />
             <Tooltip 
               contentStyle={{ 

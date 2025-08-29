@@ -1,4 +1,27 @@
 import type { BorrowerData, LoanBucket } from './types'
+import type { PoolRiskRatios } from '../../types/deepbook'
+
+// Convert Move contract risk ratios (9 decimal precision) to decimal values
+export const convertRiskRatio = (riskRatio: string): number => {
+  return parseInt(riskRatio) / 1000000000
+}
+
+// Convert decimal values to Move contract risk ratios (9 decimal precision)
+export const convertToRiskRatio = (value: number): string => {
+  return Math.round(value * 1000000000).toString()
+}
+
+// Get risk thresholds from pool configuration
+export const getRiskThresholdsFromPool = (poolRiskRatios: PoolRiskRatios) => {
+  return {
+    TARGET_RISK_FACTOR: convertRiskRatio(poolRiskRatios.target_liquidation_risk_ratio),
+    SAFE_HEALTH_FACTOR: convertRiskRatio(poolRiskRatios.min_borrow_risk_ratio),
+    LIQUIDATION_THRESHOLD: convertRiskRatio(poolRiskRatios.liquidation_risk_ratio),
+    MIN_HEALTH_FACTOR: 0.1, // This is a UI constant, not from contract
+    PRICE_CHANGE_RANGE: 40, // This is a UI constant, not from contract
+    QUICK_PRESETS: [-5, -3, -1, 1, 3, 5] as const
+  }
+}
 
 // Calculate loan duration estimates using FIFO buckets
 export const calculateLoanDurations = (borrower: BorrowerData) => {
@@ -22,11 +45,11 @@ export const calculateLoanDurations = (borrower: BorrowerData) => {
     } else if ((event.type === 'repay' || event.type === 'liquidation') && event.amount) {
       // Remove from bucket FIFO
       let remainingAmount = event.amount
-      
+
       while (remainingAmount > 0 && bucketsByPool[event.pool].length > 0) {
         const bucket = bucketsByPool[event.pool][0]
         const takenAmount = Math.min(remainingAmount, bucket.amount)
-        
+
         if (takenAmount === bucket.amount) {
           // Full bucket consumed
           const duration = (event.timestamp - bucket.timestamp) / (1000 * 60 * 60 * 24) // days
@@ -40,7 +63,7 @@ export const calculateLoanDurations = (borrower: BorrowerData) => {
           // Partial bucket consumed
           bucket.amount -= takenAmount
         }
-        
+
         remainingAmount -= takenAmount
       }
     }
@@ -174,7 +197,7 @@ export const calculateBorrowersData = (
     const totalBorrowed = loans
       .filter(loan => loan.margin_manager_id === borrower.managerId)
       .reduce((sum, loan) => sum + loan.loan_amount, 0)
-    
+
     const totalRepaid = loans
       .filter(loan => loan.margin_manager_id === borrower.managerId && loan.status === 'repaid')
       .reduce((sum, loan) => sum + loan.loan_amount, 0)
@@ -200,7 +223,7 @@ export const filterAndSortBorrowers = (
   // Apply search filter
   if (searchTerm) {
     const search = searchTerm.toLowerCase()
-    filtered = filtered.filter(borrower => 
+    filtered = filtered.filter(borrower =>
       borrower.owner.toLowerCase().includes(search) ||
       borrower.managerId.toLowerCase().includes(search) ||
       borrower.poolsUsed.some(pool => pool.toLowerCase().includes(search))
@@ -211,7 +234,7 @@ export const filterAndSortBorrowers = (
   filtered.sort((a, b) => {
     const aVal = a[sortField]
     const bVal = b[sortField]
-    
+
     let comparison = 0
     if (Array.isArray(aVal) && Array.isArray(bVal)) {
       comparison = aVal.length - bVal.length
@@ -220,7 +243,7 @@ export const filterAndSortBorrowers = (
     } else {
       comparison = String(aVal).localeCompare(String(bVal))
     }
-    
+
     return sortDirection === 'desc' ? -comparison : comparison
   })
 

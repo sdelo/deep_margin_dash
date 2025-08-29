@@ -176,6 +176,48 @@ export const sampleDeepBookV3Data: DeepBookV3Data = {
             weekly_interest_cost_usd: "0"
         }
     ],
+    deepbook_pools: [
+        {
+            id: "pool_001",
+            pool_config: {
+                base_margin_pool_id: "margin_pool_sui",
+                quote_margin_pool_id: "margin_pool_usdc",
+                risk_ratios: {
+                    min_withdraw_risk_ratio: "2000000000", // 2.0x - MIN_WITHDRAW_RISK_RATIO
+                    min_borrow_risk_ratio: "1500000000",   // 1.5x - MIN_BORROW_RISK_RATIO
+                    liquidation_risk_ratio: "1200000000",  // 1.2x - LIQUIDATION_RISK_RATIO
+                    target_liquidation_risk_ratio: "1300000000" // 1.3x - TARGET_LIQUIDATION_RISK_RATIO
+                },
+                user_liquidation_reward: "50000000", // 5%
+                pool_liquidation_reward: "10000000", // 1%
+                enabled: true
+            },
+            base_asset_type: "0x2::sui::SUI",
+            quote_asset_type: "0x2::usdc::USDC",
+            created_at: 1704067200000,
+            last_updated: 1704067200000
+        },
+        {
+            id: "pool_002",
+            pool_config: {
+                base_margin_pool_id: "margin_pool_weth",
+                quote_margin_pool_id: "margin_pool_usdc",
+                risk_ratios: {
+                    min_withdraw_risk_ratio: "2000000000", // 2.0x
+                    min_borrow_risk_ratio: "1500000000",   // 1.5x
+                    liquidation_risk_ratio: "1200000000",  // 1.2x
+                    target_liquidation_risk_ratio: "1300000000" // 1.3x
+                },
+                user_liquidation_reward: "50000000", // 5%
+                pool_liquidation_reward: "10000000", // 1%
+                enabled: true
+            },
+            base_asset_type: "0x2::weth::WETH",
+            quote_asset_type: "0x2::usdc::USDC",
+            created_at: 1704153600000,
+            last_updated: 1704153600000
+        }
+    ],
     position_health_events: [
         {
             margin_manager_id: "0x1::margin_manager::MarginManager<0x2::sui::SUI, 0x2::usdc::USDC>",

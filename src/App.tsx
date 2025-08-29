@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
-import { dataService } from './services/dataService'
-import type { DashboardData } from './types/data'
+import { deepbookDataService } from './services/deepbookDataService'
+import type { DeepBookV3Data } from './types/deepbook'
 import { PoolsTable } from './components/PoolsTable'
 import { LiquidationsFeed } from './components/LiquidationsFeed'
 import { BorrowersExplorer } from './components/BorrowersExplorer'
@@ -16,11 +16,16 @@ type TimeRange = '24h' | '7d' | '30d' | 'all'
 type ActiveTab = 'overview' | 'pools' | 'liquidations' | 'borrowers'
 
 function App() {
-  const [data, setData] = useState<DashboardData>({ 
-    managers: [], 
-    loans: [], 
-    liquidations: [],
-    dataSource: 'api'
+  const [data, setData] = useState<DeepBookV3Data>({ 
+    margin_managers: [], 
+    margin_pools: [], 
+    deepbook_pools: [],
+    position_health_events: [],
+    interest_accrual_events: [],
+    liquidation_risk_alerts: [],
+    price_impact_events: [],
+    last_updated: Date.now(),
+    data_source: 'static'
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -57,9 +62,9 @@ function App() {
     setLoading(true)
     setError(null)
     try {
-      const allData = await dataService.getData()
+      const allData = await deepbookDataService.getDeepBookV3Data()
       setData(allData)
-      setDataSource(allData.dataSource)
+      setDataSource(allData.data_source)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data')
       console.error('Error loading data:', err)
@@ -70,75 +75,40 @@ function App() {
 
   const startMs = rangeStartMs()
 
-  // Calculate KPIs
+  // Calculate KPIs - using DeepBook data structure
   const kpis = {
     // Always 24h for this one (as per spec)
-    newMarginTraders: data.managers.filter(m => m.created_at > Date.now() - 86400000).length,
+    newMarginTraders: data.margin_managers.filter(m => m.created_at > Date.now() - 86400000).length,
     activeTraders: new Set(
-      data.managers
+      data.margin_managers
         .filter(m => m.created_at >= startMs)
         .map(m => m.owner)
     ).size,
-    borrowed: (timeRange === 'all' ? data.loans : data.loans.filter(l => l.borrowed_at >= startMs))
-      .filter(l => l.status === 'borrowed' || l.status === 'repaid' || l.status === 'liquidated')
-      .reduce((sum, l) => sum + l.loan_amount, 0),
-    repaid: (timeRange === 'all' ? data.loans : data.loans.filter(l => (l.repaid_at ?? 0) >= startMs))
-      .filter(l => l.repaid_at)
-      .reduce((sum, l) => sum + (l.loan_amount), 0),
-    liquidations: (timeRange === 'all' ? data.liquidations : data.liquidations.filter(l => l.liquidated_at >= startMs)).length,
-    defaults: (timeRange === 'all' ? data.liquidations : data.liquidations.filter(l => l.liquidated_at >= startMs))
-      .reduce((sum, l) => sum + l.default_amount, 0),
-    poolRewards: (timeRange === 'all' ? data.liquidations : data.liquidations.filter(l => l.liquidated_at >= startMs))
-      .reduce((sum, l) => sum + l.pool_reward_amount, 0),
+    // For now, using placeholder values since the new structure doesn't have loans/liquidations yet
+    borrowed: 0, // TODO: Calculate from position_health_events
+    repaid: 0,   // TODO: Calculate from position_health_events
+    liquidations: 0, // TODO: Calculate from liquidation_risk_alerts
+    defaults: 0,     // TODO: Calculate from liquidation_risk_alerts
+    poolRewards: 0,  // TODO: Calculate from liquidation_risk_alerts
   }
 
-  const liqRepaidInRange = (timeRange === 'all' ? data.liquidations : data.liquidations.filter(l => l.liquidated_at >= startMs))
-    .reduce((sum, l) => sum + (l.liquidation_amount - l.default_amount), 0)
+  const liqRepaidInRange = 0 // TODO: Calculate from liquidation_risk_alerts
 
   const netDebtChange = kpis.borrowed - kpis.repaid - liqRepaidInRange
 
-  // Prepare chart data
-  const filteredLoans = timeRange === 'all' ? data.loans : data.loans.filter(loan => loan.borrowed_at >= startMs)
-  const chartData = filteredLoans
-    .reduce((acc, loan) => {
-      const date = new Date(loan.borrowed_at).toLocaleDateString()
-      const existing = acc.find(item => item.date === date)
-      
-      if (existing) {
-        existing.borrowed += loan.loan_amount
-        if (loan.repaid_at) {
-          existing.repaid += loan.loan_amount
-        }
-      } else {
-        acc.push({
-          date,
-          borrowed: loan.loan_amount,
-          repaid: loan.repaid_at ? loan.loan_amount : 0
-        })
-      }
-      return acc
-    }, [] as { date: string; borrowed: number; repaid: number }[])
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+  // Prepare chart data - using DeepBook data structure
+  // TODO: Replace with actual data from position_health_events and liquidation_risk_alerts
+  const chartData = [
+    { date: '2024-01-01', borrowed: 0, repaid: 0 },
+    { date: '2024-01-02', borrowed: 0, repaid: 0 },
+    { date: '2024-01-03', borrowed: 0, repaid: 0 }
+  ]
 
-  const filteredLiquidations = timeRange === 'all' ? data.liquidations : data.liquidations.filter(liq => liq.liquidated_at >= startMs)
-  const liquidationChartData = filteredLiquidations
-    .reduce((acc, liq) => {
-      const date = new Date(liq.liquidated_at).toLocaleDateString()
-      const existing = acc.find(item => item.date === date)
-      
-      if (existing) {
-        existing.count += 1
-        existing.amount += liq.liquidation_amount
-      } else {
-        acc.push({
-          date,
-          count: 1,
-          amount: liq.liquidation_amount
-        })
-      }
-      return acc
-    }, [] as { date: string; count: number; amount: number }[])
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+  const liquidationChartData = [
+    { date: '2024-01-01', count: 0, amount: 0 },
+    { date: '2024-01-02', count: 0, amount: 0 },
+    { date: '2024-01-03', count: 0, amount: 0 }
+  ]
 
   if (error) {
     return (
@@ -247,22 +217,21 @@ function App() {
           {import.meta.env.DEV && (
             <Button 
               onClick={() => {
-                const newSource = dataSource === 'api' ? 'static' : 'api'
-                dataService.setDataSource(newSource)
+                const newSource = dataSource === 'static' ? 'rpc' : 'static'
                 setDataSource(newSource)
                 loadData()
               }}
               variant="ghost"
               size="sm"
-              title="Toggle between API and static data (dev only)"
+              title="Toggle between static and RPC data (dev only)"
             >
-              Switch to {dataSource === 'api' ? 'Static' : 'API'}
+              Switch to {dataSource === 'static' ? 'RPC' : 'Static'}
             </Button>
           )}
           
-          {data.lastUpdated && (
+          {data.last_updated && (
             <span className="text-xs text-fg/50 ml-auto">
-              Last updated: {new Date(data.lastUpdated).toLocaleString()}
+              Last updated: {new Date(data.last_updated).toLocaleString()}
             </span>
           )}
         </div>
@@ -445,28 +414,16 @@ function App() {
                     </tr>
                   </thead>
                   <tbody className="bg-surface divide-y divide-border">
-                    {data.liquidations
-                      .sort((a, b) => b.liquidated_at - a.liquidated_at)
-                      .slice(0, 20)
-                      .map((liq) => (
-                      <tr key={liq.id} className="hover:bg-muted transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-fg">
-                          {new Date(liq.liquidated_at).toLocaleString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-brand-600">
-                          {liq.margin_pool_id}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-fg">
-                          ${(liq.liquidation_amount / 1000).toFixed(1)}K
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-fg">
-                          {((liq.default_amount / liq.liquidation_amount) * 100).toFixed(1)}%
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-fg">
-                          ${(liq.pool_reward_amount / 1000).toFixed(1)}K
-                        </td>
-                      </tr>
-                    ))}
+                    {/* TODO: Replace with actual liquidation data from liquidation_risk_alerts */}
+                    <tr className="hover:bg-muted transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-fg text-center" colSpan={5}>
+                        <div className="text-gray-500">
+                          <div className="text-lg mb-2">🚧</div>
+                          <div>Liquidation data coming soon</div>
+                          <div className="text-sm">Converting from DeepBook v3 events...</div>
+                        </div>
+                      </td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
@@ -474,19 +431,19 @@ function App() {
           </>
         ) : activeTab === 'pools' ? (
           /* Pools & Debt Tab */
-          <PoolsTable loans={data.loans} liquidations={data.liquidations} />
+          <PoolsTable loans={[]} liquidations={[]} />
         ) : activeTab === 'liquidations' ? (
           /* Liquidations Feed Tab */
           <LiquidationsFeed 
-            liquidations={data.liquidations} 
-            loans={data.loans} 
+            liquidations={[]} 
+            loans={[]} 
           />
         ) : (
           /* Borrowers Explorer Tab */
           <BorrowersExplorer 
-            managers={data.managers}
-            loans={data.loans} 
-            liquidations={data.liquidations}
+            managers={data.margin_managers}
+            loans={[]}
+            liquidations={[]}
           />
         )}
       </main>
