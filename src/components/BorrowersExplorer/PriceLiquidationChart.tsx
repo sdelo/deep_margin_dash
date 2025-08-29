@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
-import pythPriceService from '../services/pythPriceService'
-import type { AssetPriceInfo } from '../types/pyth'
+import pythPriceService from '../../services/pythPriceService'
+import type { AssetPriceInfo } from '../../types/pyth'
 
 interface PriceLiquidationChartProps {
   poolId: string

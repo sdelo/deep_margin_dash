@@ -26,15 +26,7 @@ export function AppHeader() {
                 <span className="text-xs text-fg/70">See risk in the flow</span>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                className="h-9 px-3 rounded-md bg-white/14 text-white ring-1 ring-white/25 backdrop-blur-sm hover:scale-[1.01] hover:bg-white/18 active:scale-[0.99] transition-all"
-                onClick={handleThemeToggle}
-                aria-label="Toggle theme"
-              >
-                {theme === 'dark' ? '☀️' : '🌙'}
-              </button>
-            </div>
+            
           </div>
         </div>
       </div>

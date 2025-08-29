@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 import { InfoTooltip } from './InfoTooltip'
+import { PriceLiquidationChart } from './PriceLiquidationChart'
 import type { PortfolioPriceRiskAnalysisProps } from './types'
 
 export function PortfolioPriceRiskAnalysis({ 
@@ -404,16 +405,14 @@ export function PortfolioPriceRiskAnalysis({
 
         {/* Right: Price vs Liquidation Chart */}
         <div className="h-64">
-          {/* This will be replaced by the PriceLiquidationChart component */}
-          <div className="h-full bg-slate-800/20 rounded-lg p-4 border border-slate-600/30 flex items-center justify-center">
-            <div className="text-slate-400 text-center">
-              <div className="text-lg mb-2">📊</div>
-              <div className="text-sm">Price Liquidation Chart</div>
-              <div className="text-xs opacity-70">Component will be imported here</div>
-            </div>
-          </div>
+          <PriceLiquidationChart
+            poolId={selectedPoolId}
+            selectedPriceChange={selectedPriceChange}
+            onPriceChange={setSelectedPriceChange}
+          />
         </div>
       </div>
     </div>
   )
 }
+
