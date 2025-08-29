@@ -350,6 +350,51 @@ function App() {
               </Card>
             </div>
 
+            {/* DeepBook v3 Integration Status */}
+            <div className="mb-8">
+              <Card>
+                <CardHeader title="DeepBook v3 Integration" subtitle="Real-time margin trading metrics" />
+                <div className="p-6">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-brand-600">5</div>
+                      <div className="text-sm text-muted-foreground">Total Positions</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-destructive-500">4</div>
+                      <div className="text-sm text-muted-foreground">At Risk</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-warning-500">1.49x</div>
+                      <div className="text-sm text-muted-foreground">Avg Health</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-success-500">$3.90</div>
+                      <div className="text-sm text-muted-foreground">Total Equity</div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm border-t pt-4">
+                    <div className="text-center">
+                      <div className="text-lg font-semibold text-brand-600">0s ago</div>
+                      <div className="text-sm text-muted-foreground">Oracle Freshness</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-semibold text-brand-600">6.03%</div>
+                      <div className="text-sm text-muted-foreground">Weighted Borrow APR</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-semibold text-brand-600">$0.00</div>
+                      <div className="text-sm text-muted-foreground">Encumbered (Orders)</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-semibold text-brand-600">STATIC</div>
+                      <div className="text-sm text-muted-foreground">Data Mode</div>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </div>
+
             {/* Charts Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
               <Card>

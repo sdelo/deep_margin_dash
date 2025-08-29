@@ -33,7 +33,7 @@ export interface ManagerInfo {
 export interface MarginManager {
     id: string
     balance_manager_id: string
-    margin_pool_id: string | null
+    margin_pool_id: string | null  // If null, no current loans. If set, this is the ONLY pool with active loans.
     owner: string
     created_at: number
     // Computed fields from manager_info

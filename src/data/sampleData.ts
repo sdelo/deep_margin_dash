@@ -98,7 +98,7 @@ export const sampleDeepBookV3Data: DeepBookV3Data = {
         {
             id: "manager_004",
             balance_manager_id: "balance_004",
-            margin_pool_id: "pool_001", // SUI/USDC pool
+            margin_pool_id: "pool_001", // SUI/USDC pool - ACTIVE loan
             owner: "0xMultiPoolBorrower123456789012345678901234",
             created_at: 1704326400000, // Jan 4, 2024
             manager_info: {
@@ -124,37 +124,10 @@ export const sampleDeepBookV3Data: DeepBookV3Data = {
             borrow_usage: "400000000",    // 40%
             distance_to_liquidation: "550000000", // 55%
             health_status: "healthy"
-        },
-        {
-            id: "manager_005",
-            balance_manager_id: "balance_005",
-            margin_pool_id: "pool_002", // WETH/USDC pool (same owner as manager_004)
-            owner: "0xMultiPoolBorrower123456789012345678901234",
-            created_at: 1704326400000, // Jan 4, 2024
-            manager_info: {
-                base: {
-                    asset: "100000000", // 0.1 WETH
-                    debt: "30000000",   // 0.03 WETH borrowed
-                    usd_asset: "2000000000", // $2.00
-                    usd_debt: "600000000",   // $0.60
-                    liquidation_price: "1800000000" // $1.80
-                },
-                quote: {
-                    asset: "500000000",  // 0.5 USDC
-                    debt: "0",
-                    usd_asset: "500000000",  // $0.50
-                    usd_debt: "0",
-                    liquidation_price: "0"
-                },
-                risk_ratio: "1550000000", // 1.55 (healthy)
-                liquidation_threshold: "1200000000", // 1.2
-                max_leverage: "1000000000" // 1.0x
-            },
-            net_equity_usd: "1900000000", // $1.90
-            borrow_usage: "300000000",    // 30%
-            distance_to_liquidation: "350000000", // 35%
-            health_status: "healthy"
         }
+        // Note: In the actual Move code, a margin manager can only have loans in ONE pool at a time.
+        // The margin_pool_id field tracks the SINGLE active loan pool.
+        // Multiple managers per owner is not the intended design.
     ],
     margin_pools: [
         {
