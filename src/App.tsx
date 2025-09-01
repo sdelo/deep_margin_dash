@@ -6,6 +6,7 @@ import { PoolsTable } from './components/PoolsTable'
 import { LiquidationsFeed } from './components/LiquidationsFeed'
 import { BorrowersExplorer } from './components/BorrowersExplorer'
 import { AppHeader } from './components/AppHeader'
+import { LendingPage } from './components/Lending'
 import { Button } from './components/ui/Button'
 import { Card, CardHeader } from './components/ui/Card'
 import { Badge } from './components/ui/Badge'
@@ -13,7 +14,7 @@ import { initializeTheme } from './utils/theme'
 import './App.css'
 
 type TimeRange = '24h' | '7d' | '30d' | 'all'
-type ActiveTab = 'overview' | 'pools' | 'liquidations' | 'borrowers'
+type ActiveTab = 'overview' | 'pools' | 'liquidations' | 'borrowers' | 'lending'
 
 function App() {
   const [data, setData] = useState<DeepBookV3Data>({ 
@@ -176,7 +177,7 @@ function App() {
       <AppHeader />
       
       {/* Main Content */}
-      <main className="container py-6">
+      <main className="py-6">
         {/* Time Range Controls */}
         <div className="flex flex-wrap items-center gap-3 mb-6">
           <div className="flex items-center gap-2">
@@ -251,6 +252,7 @@ function App() {
           <TabButton label="Pools & Debt" value="pools" />
           <TabButton label="Liquidations Feed" value="liquidations" />
           <TabButton label="Borrowers Explorer" value="borrowers" />
+          <TabButton label="Lending" value="lending" />
         </div>
 
         {activeTab === 'overview' ? (
@@ -438,6 +440,9 @@ function App() {
             liquidations={[]} 
             loans={[]} 
           />
+        ) : activeTab === 'lending' ? (
+          /* Lending Tab */
+          <LendingPage />
         ) : (
           /* Borrowers Explorer Tab */
           <BorrowersExplorer 

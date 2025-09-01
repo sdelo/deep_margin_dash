@@ -68,9 +68,18 @@ export function PortfolioPriceRiskAnalysis({
     }
     
     const thresholds = {
+      // Core risk thresholds from Move contract
+      MIN_WITHDRAW_RISK_RATIO: convertRiskRatio(selectedPool.pool_config.risk_ratios.min_withdraw_risk_ratio),
+      MIN_BORROW_RISK_RATIO: convertRiskRatio(selectedPool.pool_config.risk_ratios.min_borrow_risk_ratio),
+      LIQUIDATION_RISK_RATIO: convertRiskRatio(selectedPool.pool_config.risk_ratios.liquidation_risk_ratio),
+      TARGET_LIQUIDATION_RISK_RATIO: convertRiskRatio(selectedPool.pool_config.risk_ratios.target_liquidation_risk_ratio),
+      
+      // Aliases for backward compatibility
       TARGET_RISK_FACTOR: convertRiskRatio(selectedPool.pool_config.risk_ratios.target_liquidation_risk_ratio),
       SAFE_HEALTH_FACTOR: convertRiskRatio(selectedPool.pool_config.risk_ratios.min_borrow_risk_ratio),
       LIQUIDATION_THRESHOLD: convertRiskRatio(selectedPool.pool_config.risk_ratios.liquidation_risk_ratio),
+      
+      // Additional configuration
       MIN_HEALTH_FACTOR: 0.1,         // Minimum health factor to prevent negative values
       PRICE_CHANGE_RANGE: 40,         // Range for price change analysis (-40% to +40%)
       QUICK_PRESETS: [-5, -3, -1, 1, 3, 5] as const
@@ -114,7 +123,7 @@ export function PortfolioPriceRiskAnalysis({
   
 
 
-  // Calculate portfolio risk after price change
+  // Calculate portfolio risk after price change using pool thresholds
   const calculatePortfolioRiskAfterPriceChange = (priceChangePercent: number) => {
     // Simplified calculation: assume linear relationship for demo
     const priceMultiplier = 1 + (priceChangePercent / 100)
@@ -130,8 +139,9 @@ export function PortfolioPriceRiskAnalysis({
     return {
       avgHealthFactor: newAvgHF,
       positionsAtRisk: newPositionsAtRisk,
-      isAtRisk: newAvgHF < RISK_THRESHOLDS.SAFE_HEALTH_FACTOR,
-      isLiquidatable: newAvgHF < RISK_THRESHOLDS.LIQUIDATION_THRESHOLD
+      // Use pool thresholds consistently
+      isAtRisk: newAvgHF < RISK_THRESHOLDS.MIN_BORROW_RISK_RATIO,
+      isLiquidatable: newAvgHF < RISK_THRESHOLDS.LIQUIDATION_RISK_RATIO
     }
   }
 
@@ -144,8 +154,11 @@ export function PortfolioPriceRiskAnalysis({
     return {
       priceChange,
       avgHealthFactor: risk.avgHealthFactor,
-      liquidationThreshold: RISK_THRESHOLDS.LIQUIDATION_THRESHOLD,
-      targetRiskFactor: RISK_THRESHOLDS.TARGET_RISK_FACTOR,
+      // All pool risk thresholds for comprehensive visualization
+      minWithdrawThreshold: RISK_THRESHOLDS.MIN_WITHDRAW_RISK_RATIO,
+      minBorrowThreshold: RISK_THRESHOLDS.MIN_BORROW_RISK_RATIO,
+      liquidationThreshold: RISK_THRESHOLDS.LIQUIDATION_RISK_RATIO,
+      targetLiquidationThreshold: RISK_THRESHOLDS.TARGET_LIQUIDATION_RISK_RATIO,
       currentPosition: selectedBorrowerHealthFactor
     }
   })
@@ -154,8 +167,10 @@ export function PortfolioPriceRiskAnalysis({
   console.log('Chart data sample:', {
     firstPoint: chartData[0],
     lastPoint: chartData[chartData.length - 1],
-    liquidationThreshold: RISK_THRESHOLDS.LIQUIDATION_THRESHOLD,
-    targetRiskFactor: RISK_THRESHOLDS.TARGET_RISK_FACTOR,
+    minWithdrawThreshold: RISK_THRESHOLDS.MIN_WITHDRAW_RISK_RATIO,
+    minBorrowThreshold: RISK_THRESHOLDS.MIN_BORROW_RISK_RATIO,
+    liquidationThreshold: RISK_THRESHOLDS.LIQUIDATION_RISK_RATIO,
+    targetLiquidationThreshold: RISK_THRESHOLDS.TARGET_LIQUIDATION_RISK_RATIO,
     totalPoints: chartData.length
   })
 
@@ -220,7 +235,7 @@ export function PortfolioPriceRiskAnalysis({
         <div className="bg-slate-700/50 rounded-lg p-4 relative group">
           <div className="text-sm text-slate-400 mb-2 flex items-center">
             Portfolio Health Factor
-            <InfoTooltip content="Total USD Assets ÷ Total USD Debt. Values above 1.0x mean you have more assets than debt.">
+            <InfoTooltip content={`Total USD Assets ÷ Total USD Debt. Values above ${RISK_THRESHOLDS.MIN_BORROW_RISK_RATIO.toFixed(2)}x are considered safe for this pool.`}>
               <span className="ml-1 text-slate-500 cursor-help">ⓘ</span>
             </InfoTooltip>
           </div>
@@ -229,12 +244,12 @@ export function PortfolioPriceRiskAnalysis({
           </div>
           <div className="text-sm mt-1">
             <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-              riskAfterChange.avgHealthFactor > RISK_THRESHOLDS.SAFE_HEALTH_FACTOR ? 'bg-green-900/50 text-green-300 border border-green-600/50' :
-              riskAfterChange.avgHealthFactor > RISK_THRESHOLDS.TARGET_RISK_FACTOR ? 'bg-amber-900/50 text-amber-300 border border-amber-600/50' :
+              riskAfterChange.avgHealthFactor > RISK_THRESHOLDS.MIN_BORROW_RISK_RATIO ? 'bg-green-900/50 text-green-300 border border-green-600/50' :
+              riskAfterChange.avgHealthFactor > RISK_THRESHOLDS.TARGET_LIQUIDATION_RISK_RATIO ? 'bg-amber-900/50 text-amber-300 border border-amber-600/50' :
               'bg-red-900/50 text-red-300 border border-red-600/50'
             }`}>
-              {riskAfterChange.avgHealthFactor > RISK_THRESHOLDS.SAFE_HEALTH_FACTOR ? 'Safe' :
-               riskAfterChange.avgHealthFactor > RISK_THRESHOLDS.TARGET_RISK_FACTOR ? 'Caution' : 'Danger'}
+              {riskAfterChange.avgHealthFactor > RISK_THRESHOLDS.MIN_BORROW_RISK_RATIO ? 'Safe' :
+               riskAfterChange.avgHealthFactor > RISK_THRESHOLDS.TARGET_LIQUIDATION_RISK_RATIO ? 'Caution' : 'Danger'}
             </span>
           </div>
         </div>
@@ -242,7 +257,7 @@ export function PortfolioPriceRiskAnalysis({
         <div className="bg-slate-700/50 rounded-lg p-4 relative group">
           <div className="text-sm text-slate-400 mb-2 flex items-center">
             Positions at Risk
-            <InfoTooltip content="Number of positions with Health Factor below 1.2x (warning threshold). These positions are close to liquidation.">
+            <InfoTooltip content={`Number of positions with Health Factor below ${RISK_THRESHOLDS.MIN_BORROW_RISK_RATIO.toFixed(2)}x (min borrow threshold). These positions are close to liquidation.`}>
               <span className="ml-1 text-slate-500 cursor-help">ⓘ</span>
             </InfoTooltip>
           </div>
@@ -263,7 +278,7 @@ export function PortfolioPriceRiskAnalysis({
         <div className="bg-slate-700/50 rounded-lg p-4 relative group">
           <div className="text-sm text-slate-400 mb-2 flex items-center">
             Risk Level
-            <InfoTooltip content={`SAFE: HF > ${RISK_THRESHOLDS.SAFE_HEALTH_FACTOR}x | HIGH: HF ${RISK_THRESHOLDS.LIQUIDATION_THRESHOLD}x-${RISK_THRESHOLDS.SAFE_HEALTH_FACTOR}x | CRITICAL: HF < ${RISK_THRESHOLDS.LIQUIDATION_THRESHOLD}x (liquidatable)`}>
+            <InfoTooltip content={`SAFE: HF > ${RISK_THRESHOLDS.MIN_BORROW_RISK_RATIO}x | WARNING: HF ${RISK_THRESHOLDS.TARGET_LIQUIDATION_RISK_RATIO}x-${RISK_THRESHOLDS.MIN_BORROW_RISK_RATIO}x | DANGER: HF ${RISK_THRESHOLDS.LIQUIDATION_RISK_RATIO}x-${RISK_THRESHOLDS.TARGET_LIQUIDATION_RISK_RATIO}x | CRITICAL: HF < ${RISK_THRESHOLDS.LIQUIDATION_RISK_RATIO}x (liquidatable)`}>
               <span className="ml-1 text-slate-500 cursor-help">ⓘ</span>
             </InfoTooltip>
           </div>
@@ -339,10 +354,10 @@ export function PortfolioPriceRiskAnalysis({
           <div className="text-center">
             <div className="text-xs text-slate-400 mb-2">Post-Liquidation Position</div>
             <div className="text-lg font-bold text-purple-300 mb-1">
-              {RISK_THRESHOLDS.TARGET_RISK_FACTOR.toFixed(2)}x Health Factor
+              {RISK_THRESHOLDS.TARGET_LIQUIDATION_RISK_RATIO.toFixed(2)}x Health Factor
             </div>
             <div className="text-sm text-slate-400">
-              After liquidation, you'd be reset to {RISK_THRESHOLDS.TARGET_RISK_FACTOR.toFixed(1)}x
+              After liquidation, you'd be reset to {RISK_THRESHOLDS.TARGET_LIQUIDATION_RISK_RATIO.toFixed(1)}x
             </div>
             <div className="text-xs text-slate-500 mt-1">
               Protocol safety threshold
@@ -382,25 +397,28 @@ export function PortfolioPriceRiskAnalysis({
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
           <div>
-            <div className="text-xs text-blue-200 mb-1">Liquidation Threshold</div>
-            <div className="text-lg font-bold text-red-400">{RISK_THRESHOLDS.LIQUIDATION_THRESHOLD.toFixed(2)}x</div>
-            <div className="text-xs text-blue-300">Below this = liquidatable</div>
+            <div className="text-xs text-blue-200 mb-1">Min Withdraw</div>
+            <div className="text-lg font-bold text-orange-400">{RISK_THRESHOLDS.MIN_WITHDRAW_RISK_RATIO.toFixed(2)}x</div>
+            <div className="text-xs text-blue-300">Required to withdraw</div>
           </div>
           <div>
-            <div className="text-xs text-blue-200 mb-1">Target Risk Factor</div>
-            <div className="text-lg font-bold text-purple-400">{RISK_THRESHOLDS.TARGET_RISK_FACTOR.toFixed(2)}x</div>
-            <div className="text-xs text-blue-300">Post-liquidation health</div>
+            <div className="text-xs text-blue-200 mb-1">Min Borrow</div>
+            <div className="text-lg font-bold text-green-400">{RISK_THRESHOLDS.MIN_BORROW_RISK_RATIO.toFixed(2)}x</div>
+            <div className="text-xs text-blue-300">Required to borrow</div>
           </div>
           <div>
-            <div className="text-xs text-blue-200 mb-1">Safe Health Factor</div>
-            <div className="text-lg font-bold text-green-400">{RISK_THRESHOLDS.SAFE_HEALTH_FACTOR.toFixed(2)}x</div>
-            <div className="text-xs text-blue-300">Above this = safe</div>
+            <div className="text-xs text-blue-200 mb-1">Liquidation</div>
+            <div className="text-lg font-bold text-red-400">{RISK_THRESHOLDS.LIQUIDATION_RISK_RATIO.toFixed(2)}x</div>
+            <div className="text-xs text-blue-300">Below = liquidatable</div>
           </div>
           <div>
-            <div className="text-xs text-blue-200 mb-1">Pool ID</div>
-            <div className="text-lg font-bold text-blue-300">{selectedPoolId}</div>
-            <div className="text-xs text-blue-300">Source: DeepBook v3</div>
+            <div className="text-xs text-blue-200 mb-1">Target</div>
+            <div className="text-lg font-bold text-purple-400">{RISK_THRESHOLDS.TARGET_LIQUIDATION_RISK_RATIO.toFixed(2)}x</div>
+            <div className="text-xs text-blue-300">Post-liquidation</div>
           </div>
+        </div>
+        <div className="text-center mt-3">
+          <div className="text-xs text-blue-300">Pool ID: <span className="font-bold">{selectedPoolId}</span> | Source: DeepBook v3</div>
         </div>
       </div>
 
@@ -417,7 +435,7 @@ export function PortfolioPriceRiskAnalysis({
         {/* Left: Portfolio Risk Chart */}
         <div className="h-64 bg-slate-800/20 rounded-lg p-4 border border-slate-600/30">
           <div className="text-xs text-slate-400 mb-2 text-center">
-            💡 <strong>Target Risk Factor ({RISK_THRESHOLDS.TARGET_RISK_FACTOR.toFixed(2)}x):</strong> When positions are liquidated, collateral is sold to restore them to this health level
+            💡 <strong>Pool Risk Thresholds:</strong> All thresholds sourced from Move contract data for pool {selectedPoolId}
           </div>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData}>
@@ -444,10 +462,14 @@ export function PortfolioPriceRiskAnalysis({
                 formatter={(value: any, name: any, props: any) => {
                   if (name === 'avgHealthFactor') {
                     return [`${value.toFixed(2)}x`, 'Health Factor']
+                  } else if (name === 'minWithdrawThreshold') {
+                    return [`${RISK_THRESHOLDS.MIN_WITHDRAW_RISK_RATIO.toFixed(2)}x`, 'Min Withdraw (2.0x)']
+                  } else if (name === 'minBorrowThreshold') {
+                    return [`${RISK_THRESHOLDS.MIN_BORROW_RISK_RATIO.toFixed(2)}x`, 'Min Borrow (1.5x)']
                   } else if (name === 'liquidationThreshold') {
-                    return [`${RISK_THRESHOLDS.LIQUIDATION_THRESHOLD.toFixed(2)}x`, 'Liquidation Threshold']
-                  } else if (name === 'targetRiskFactor') {
-                    return [`${RISK_THRESHOLDS.TARGET_RISK_FACTOR.toFixed(2)}x`, 'Target Risk Factor']
+                    return [`${RISK_THRESHOLDS.LIQUIDATION_RISK_RATIO.toFixed(2)}x`, 'Liquidation (1.2x)']
+                  } else if (name === 'targetLiquidationThreshold') {
+                    return [`${RISK_THRESHOLDS.TARGET_LIQUIDATION_RISK_RATIO.toFixed(2)}x`, 'Target (1.3x)']
                   } else if (name === 'currentPosition') {
                     return [`${selectedBorrowerHealthFactor.toFixed(2)}x`, 'Current Position']
                   }
@@ -462,7 +484,23 @@ export function PortfolioPriceRiskAnalysis({
                 dot={false}
                 activeDot={{ r: 6, fill: '#3b82f6' }}
               />
-              {/* Liquidation threshold line */}
+              {/* Min Withdraw threshold line (2.0x) */}
+              <Line 
+                type="monotone" 
+                dataKey="minWithdrawThreshold" 
+                stroke="#f59e0b" 
+                strokeWidth={2}
+                strokeDasharray="5,5"
+              />
+              {/* Min Borrow threshold line (1.5x) */}
+              <Line 
+                type="monotone" 
+                dataKey="minBorrowThreshold" 
+                stroke="#10b981" 
+                strokeWidth={2}
+                strokeDasharray="5,5"
+              />
+              {/* Liquidation threshold line (1.2x) */}
               <Line 
                 type="monotone" 
                 dataKey="liquidationThreshold" 
@@ -470,10 +508,10 @@ export function PortfolioPriceRiskAnalysis({
                 strokeWidth={3}
                 strokeDasharray="0"
               />
-              {/* Target risk factor line (where liquidated positions are restored to) */}
+              {/* Target liquidation threshold line (1.3x) */}
               <Line 
                 type="monotone" 
-                dataKey="targetRiskFactor" 
+                dataKey="targetLiquidationThreshold" 
                 stroke="#8b5cf6" 
                 strokeWidth={3}
                 strokeDasharray="0"
@@ -504,10 +542,12 @@ export function PortfolioPriceRiskAnalysis({
           </ResponsiveContainer>
           <div className="text-sm text-slate-400 text-center mt-3">
             <span className="inline-block w-5 h-1.5 bg-blue-500 mr-2 rounded"></span>Portfolio Health Factor
-            <span className="inline-block w-5 h-1.5 bg-red-500 mx-3"></span>Liquidation ({RISK_THRESHOLDS.LIQUIDATION_THRESHOLD.toFixed(2)}x)
-            <span className="inline-block w-5 h-1.5 bg-purple-500 mx-2 rounded"></span>Target Risk Factor ({RISK_THRESHOLDS.TARGET_RISK_FACTOR.toFixed(2)}x)
+            <span className="inline-block w-5 h-1.5 bg-orange-500 mx-2 rounded"></span>Min Withdraw ({RISK_THRESHOLDS.MIN_WITHDRAW_RISK_RATIO.toFixed(2)}x)
+            <span className="inline-block w-5 h-1.5 bg-green-500 mx-2 rounded"></span>Min Borrow ({RISK_THRESHOLDS.MIN_BORROW_RISK_RATIO.toFixed(2)}x)
+            <span className="inline-block w-5 h-1.5 bg-red-500 mx-2 rounded"></span>Liquidation ({RISK_THRESHOLDS.LIQUIDATION_RISK_RATIO.toFixed(2)}x)
+            <span className="inline-block w-5 h-1.5 bg-purple-500 mx-2 rounded"></span>Target ({RISK_THRESHOLDS.TARGET_LIQUIDATION_RISK_RATIO.toFixed(2)}x)
             <span className="inline-block w-5 h-1.5 bg-green-500 mx-2 rounded"></span>Current Portfolio
-            <span className="inline-block w-5 h-1.5 bg-orange-500 mx-2 rounded"></span>Slider Position
+            <span className="inline-block w-5 h-1.5 bg-yellow-500 mx-2 rounded"></span>Slider Position
           </div>
         </div>
 

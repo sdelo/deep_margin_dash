@@ -186,11 +186,7 @@
 
   /* Card & surface helpers */
   /* Ensure main content has proper z-index */
-  .container {
-    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
-    position: relative;
-    z-index: 1;
-  }
+
 
   main {
     position: relative;
