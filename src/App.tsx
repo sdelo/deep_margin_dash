@@ -173,87 +173,11 @@ function App() {
   }
 
   return (
-    <div className="min-h-screens">
-      <AppHeader />
+    <div className="min-h-screens mx-5">
+      <AppHeader activeTab={activeTab} onTabChange={setActiveTab} />
       
       {/* Main Content */}
-      <main className="py-6">
-        {/* Time Range Controls */}
-        <div className="flex flex-wrap items-center gap-3 mb-6">
-          <div className="flex items-center gap-2">
-            <RangeButton label="24h" value="24h" />
-            <RangeButton label="7d" value="7d" />
-            <RangeButton label="30d" value="30d" />
-            <RangeButton label="All" value="all" />
-          </div>
-          
-          {/* Data Source Indicator */}
-          <div 
-            className="flex items-center gap-2 px-3 py-2 rounded-lg"
-            style={{
-              backgroundColor: 'rgba(139, 92, 246, 0.1)',
-              border: '1px solid rgba(139, 92, 246, 0.3)',
-              boxShadow: '0 0 10px rgba(139, 92, 246, 0.2)'
-            }}
-          >
-            <span className="text-sm text-fg/70">Data:</span>
-            <Badge 
-              tone={dataSource === 'api' ? 'positive' : 'info'}
-              className="text-xs"
-            >
-              {dataSource === 'api' ? 'Live API' : 'Static File'}
-            </Badge>
-          </div>
-          
-          <Button 
-            onClick={loadData}
-            disabled={loading}
-            variant="outline"
-            size="sm"
-          >
-            {loading ? 'Refreshing...' : 'Refresh Data'}
-          </Button>
-          
-          {/* Data Source Toggle (Development Only) */}
-          {import.meta.env.DEV && (
-            <Button 
-              onClick={() => {
-                const newSource = dataSource === 'static' ? 'rpc' : 'static'
-                setDataSource(newSource)
-                loadData()
-              }}
-              variant="ghost"
-              size="sm"
-              title="Toggle between static and RPC data (dev only)"
-            >
-              Switch to {dataSource === 'static' ? 'RPC' : 'Static'}
-            </Button>
-          )}
-          
-          {data.last_updated && (
-            <span className="text-xs text-fg/50 ml-auto">
-              Last updated: {new Date(data.last_updated).toLocaleString()}
-            </span>
-          )}
-        </div>
-
-        {/* Navigation Tabs */}
-        <div 
-          className="flex items-center gap-1 p-2 rounded-lg w-fit mb-6"
-          style={{
-            backgroundColor: 'rgba(139, 92, 246, 0.1)',
-            border: '2px solid rgba(139, 92, 246, 0.6)',
-            boxShadow: '0 0 20px rgba(139, 92, 246, 0.3)',
-            zIndex: 9999,
-            position: 'relative'
-          }}
-        >
-          <TabButton label="Overview" value="overview" />
-          <TabButton label="Pools & Debt" value="pools" />
-          <TabButton label="Liquidations Feed" value="liquidations" />
-          <TabButton label="Borrowers Explorer" value="borrowers" />
-          <TabButton label="Lending" value="lending" />
-        </div>
+      <main className=" py-6">
 
         {activeTab === 'overview' ? (
           <>
