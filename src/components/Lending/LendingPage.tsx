@@ -3,7 +3,9 @@ import { MarginPoolsList } from './MarginPoolsList';
 import { DeepBookPoolsSection } from './DeepBookPoolsSection';
 import { MarginPoolEvents } from './MarginPoolEvents';
 import { SupplyWithdrawForm } from './SupplyWithdrawForm';
+import { UserPositionSummary } from './UserPositionSummary';
 import { UserEventsTimeline } from './UserEventsTimeline';
+import { UtilizationCurve } from './UtilizationCurve';
 import type { MarginPool } from '../../types/lending';
 
 export function LendingPage() {
@@ -74,16 +76,32 @@ export function LendingPage() {
         <div className="px-4 py-6">
           <div className="max-w-7xl mx-auto">
             <h1 className="text-3xl font-bold text-gray-900 mb-6">Margin Pools</h1>
-            <MarginPoolsList onPoolSelect={setSelectedPool} selectedPool={selectedPool} />
+            <MarginPoolsList 
+              onPoolSelect={(pool) => {
+                setSelectedPool(pool);
+                setActiveTab('detail');
+              }} 
+              selectedPool={selectedPool} 
+            />
           </div>
         </div>
       ) : (
         /* Detail View - Three column layout */
         <div className="flex h-[calc(100vh-120px)]">
           {/* Left Sidebar - Margin Pools List */}
-          <div className="w-64 bg-white border-r border-gray-200 overflow-y-auto">
-            <div className="p-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Margin Pools</h3>
+          <div className="w-56 bg-white border-r border-gray-200 overflow-y-auto">
+            <div className="p-3">
+              <h3 className="text-base font-semibold text-gray-900 mb-3">Margin Pools</h3>
+              
+              {/* Search Bar */}
+              <div className="mb-3">
+                <input
+                  type="text"
+                  placeholder="Search pools..."
+                  className="w-full px-2 py-1.5 border border-gray-300 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              
               <MarginPoolsList 
                 onPoolSelect={setSelectedPool} 
                 selectedPool={selectedPool}
@@ -94,51 +112,103 @@ export function LendingPage() {
 
           {/* Central Content Area */}
           <div className="flex-1 bg-gray-50 overflow-y-auto">
-            <div className="px-4 py-6 space-y-6">
-              {/* Margin Pool Details */}
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Margin Pool Details</h2>
-                {selectedPool ? (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                      <p className="text-sm text-gray-500">Pool Name</p>
-                      <p className="text-lg font-semibold text-gray-900">{selectedPool.name}</p>
+            <div className="px-4 py-6 h-full flex flex-col">
+              {/* Top Row: Margin Pool Details + Supply/Withdraw side by side */}
+              <div className="flex gap-6 mb-2" style={{ height: '40%' }}>
+                {/* Margin Pool Details - Left side (60%) */}
+                <div className="w-3/5 bg-white rounded-lg shadow-sm p-6 overflow-y-auto">
+                  <h2 className="text-xl font-bold text-gray-900 mb-4">Margin Pool Details</h2>
+                  {selectedPool ? (
+                    <div className="space-y-4">
+                      {/* Pool Info and Interest Rate Curve side by side */}
+                      <div className="flex gap-4">
+                        {/* Left side - Pool Metrics */}
+                        <div className="flex-1">
+                          {/* Basic Pool Info */}
+                          <div className="grid grid-cols-2 gap-1">
+                            <div>
+                              <p className="text-sm text-gray-500">Pool Name</p>
+                              <p className="text-lg font-semibold text-gray-900">{selectedPool.name}</p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-gray-500">Current Rate</p>
+                              <p className="text-lg font-semibold text-green-600">
+                                {(parseFloat(selectedPool.current_rate || '0') * 100).toFixed(2)}%
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-gray-500">Utilization</p>
+                              <p className="text-lg font-semibold text-gray-900">
+                                {(parseFloat(selectedPool.utilization_rate) * 100).toFixed(1)}%
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-gray-500">Total Supply</p>
+                              <p className="text-lg font-semibold text-gray-900">
+                                {(parseFloat(selectedPool.total_supply) / 1e9).toFixed(2)} {selectedPool.currency_symbol}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Additional Pool Metrics */}
+                          <div className="grid grid-cols-2 gap-1">
+                            <div>
+                              <p className="text-sm text-gray-500">Unique Positions</p>
+                              <p className="text-lg font-semibold text-gray-900">{selectedPool.unique_positions}</p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-gray-500">Protocol Spread</p>
+                              <p className="text-lg font-semibold text-gray-900">
+                                {(parseFloat(selectedPool.protocol_spread) * 100).toFixed(2)}%
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-gray-500">Protocol Profit</p>
+                              <p className="text-lg font-semibold text-gray-900">
+                                ${(parseFloat(selectedPool.protocol_profit) / 1e9).toFixed(2)}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-gray-500">Vault Value</p>
+                              <p className="text-lg font-semibold text-gray-900">
+                                ${(parseFloat(selectedPool.vault_value) / 1e9).toFixed(2)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Right side - Interest Rate Curve */}
+                        <div className="flex-1">
+                          <h3 className="text-sm font-semibold text-gray-900 mb-2">Interest Rate Curve</h3>
+                          <UtilizationCurve pool={selectedPool} />
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Current Rate</p>
-                      <p className="text-lg font-semibold text-green-600">
-                        {(parseFloat(selectedPool.current_rate || '0') * 100).toFixed(2)}%
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Utilization</p>
-                      <p className="text-lg font-semibold text-gray-900">
-                        {(parseFloat(selectedPool.utilization_rate) * 100).toFixed(1)}%
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Total Supply</p>
-                      <p className="text-lg font-semibold text-gray-900">
-                        {(parseFloat(selectedPool.total_supply) / 1e9).toFixed(2)} {selectedPool.currency_symbol}
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-gray-500">Select a pool to view details</p>
-                )}
+                  ) : (
+                    <p className="text-gray-500">Select a pool to view details</p>
+                  )}
+                </div>
+
+                {/* Supply/Withdraw Section - Right side (larger) */}
+                <div className="flex-1 bg-white rounded-lg shadow-sm p-6 overflow-y-auto">
+                  <h2 className="text-xl font-bold text-gray-900 mb-4">Supply / Withdraw</h2>
+                  {selectedPool && (
+                    <SupplyWithdrawForm pool={selectedPool} />
+                  )}
+                </div>
               </div>
 
-              {/* Pools Linked to Margin Pool */}
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Pools Linked to Margin Pool</h2>
+              {/* Pools Linked to Margin Pool - 15% height */}
+              <div className="bg-white rounded-lg shadow-sm p-3 mb-2 flex-shrink-0 overflow-y-auto" style={{ height: '15%' }}>
+                <h2 className="text-sm font-bold text-gray-900 mb-2">Linked DeepBook Pools</h2>
                 {selectedPool && (
                   <DeepBookPoolsSection poolId={selectedPool.id} />
                 )}
               </div>
 
-              {/* All Margin Pool Events */}
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-xl font-bold text-gray-900 mb-4">All Margin Pool Events</h2>
+              {/* All Margin Pool Events - remaining height */}
+              <div className="bg-white rounded-lg shadow-sm p-3 flex-1">
+                <h2 className="text-sm font-bold text-gray-900 mb-2">Margin Pool Events</h2>
                 {selectedPool && (
                   <MarginPoolEvents poolId={selectedPool.id} />
                 )}
@@ -146,20 +216,20 @@ export function LendingPage() {
             </div>
           </div>
 
-          {/* Right Sidebar - User Actions and History */}
-          <div className="w-80 bg-white border-l border-gray-200 overflow-y-auto">
-            <div className="p-4 space-y-6">
-              {/* User Supply Withdraw */}
+          {/* Right Sidebar - User Position Summary */}
+          <div className="w-72 bg-white border-l border-gray-200 overflow-y-auto">
+            <div className="p-3 space-y-4">
+              {/* User Position Summary */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">User Supply Withdraw</h3>
+                <h3 className="text-base font-semibold text-gray-900 mb-3">Your Position</h3>
                 {selectedPool && (
-                  <SupplyWithdrawForm pool={selectedPool} />
+                  <UserPositionSummary pool={selectedPool} />
                 )}
               </div>
 
               {/* User Event History */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">User Event History</h3>
+                <h3 className="text-base font-semibold text-gray-900 mb-4">Your Events</h3>
                 {selectedPool && (
                   <UserEventsTimeline pool={selectedPool} />
                 )}

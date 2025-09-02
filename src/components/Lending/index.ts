@@ -5,4 +5,6 @@ export { DeepBookPoolsSection } from './DeepBookPoolsSection';
 export { MarginPoolEvents } from './MarginPoolEvents';
 export { SupplyWithdrawForm } from './SupplyWithdrawForm';
 export { UserPosition } from './UserPosition';
+export { UserPositionSummary } from './UserPositionSummary';
 export { UserEventsTimeline } from './UserEventsTimeline';
+export { UtilizationCurve } from './UtilizationCurve';

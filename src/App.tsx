@@ -6,10 +6,11 @@ import { PoolsTable } from './components/PoolsTable'
 import { LiquidationsFeed } from './components/LiquidationsFeed'
 import { BorrowersExplorer } from './components/BorrowersExplorer'
 import { AppHeader } from './components/AppHeader'
-import { LendingPage } from './components/Lending'
+import { EnhancedLendingPage } from './components/Lending/EnhancedLendingPage'
 import { Button } from './components/ui/Button'
 import { Card, CardHeader } from './components/ui/Card'
 import { Badge } from './components/ui/Badge'
+import { WalletTest } from './components/Wallet/WalletTest'
 import { initializeTheme } from './utils/theme'
 import './App.css'
 
@@ -32,7 +33,7 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   const [timeRange, setTimeRange] = useState<TimeRange>('all')
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview')
-  const [dataSource, setDataSource] = useState<'api' | 'static'>('api')
+  const [dataSource, setDataSource] = useState<'api' | 'static' | 'rpc' | 'events'>('api')
 
   // Load data on component mount
   useEffect(() => {
@@ -354,6 +355,11 @@ function App() {
                 </table>
               </div>
             </Card>
+
+            {/* Wallet Test Component */}
+            <div className="mb-8">
+              <WalletTest />
+            </div>
           </>
         ) : activeTab === 'pools' ? (
           /* Pools & Debt Tab */
@@ -366,7 +372,7 @@ function App() {
           />
         ) : activeTab === 'lending' ? (
           /* Lending Tab */
-          <LendingPage />
+          <EnhancedLendingPage />
         ) : (
           /* Borrowers Explorer Tab */
           <BorrowersExplorer 

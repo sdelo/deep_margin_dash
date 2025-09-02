@@ -124,12 +124,7 @@ export function MarginPoolEvents({ poolId }: MarginPoolEventsProps) {
   };
 
   return (
-    <Card>
-      <CardHeader 
-        title="Margin Pool Events" 
-        subtitle="Live stream of pool activities and transactions"
-      />
-      
+    <div className="space-y-4">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className={`w-2 h-2 rounded-full ${isLive ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
@@ -145,32 +140,44 @@ export function MarginPoolEvents({ poolId }: MarginPoolEventsProps) {
         </button>
       </div>
 
-      <div className="space-y-3 max-h-96 overflow-y-auto">
-        {events.map((event) => (
-          <div key={event.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-            <div className="text-lg">{getEventIcon(event.type)}</div>
-            
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <Badge tone={getEventColor(event.type)} className="text-xs">
-                  {event.type}
-                </Badge>
-                <span className="text-sm font-medium text-gray-900">
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-gray-200">
+              <th className="text-left py-2 px-3 text-xs font-medium text-gray-700">Margin ID</th>
+              <th className="text-left py-2 px-3 text-xs font-medium text-gray-700">Asset Type</th>
+              <th className="text-left py-2 px-3 text-xs font-medium text-gray-700">Address</th>
+              <th className="text-left py-2 px-3 text-xs font-medium text-gray-700">Amount</th>
+              <th className="text-left py-2 px-3 text-xs font-medium text-gray-700">Timestamp</th>
+            </tr>
+          </thead>
+          <tbody>
+            {events.map((event) => (
+              <tr key={event.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                <td className="py-2 px-3 text-xs text-gray-900">
+                  {event.margin_pool_id.slice(0, 8)}...
+                </td>
+                <td className="py-2 px-3">
+                  <Badge tone={getEventColor(event.type)} className="text-xs">
+                    {event.type}
+                  </Badge>
+                </td>
+                <td className="py-2 px-3 text-xs text-gray-900">
+                  {event.supplier.slice(0, 8)}...
+                </td>
+                <td className="py-2 px-3 text-xs font-medium text-gray-900">
                   {event.type === 'AssetSupplied' 
                     ? formatAmount(event.supply_amount || '0')
                     : formatAmount(event.withdrawal_amount || '0')
                   } SUI
-                </span>
-              </div>
-              
-              <div className="flex items-center gap-4 text-xs text-gray-500">
-                <span>From: {event.supplier}</span>
-                <span>Time: {formatTimestamp(event.timestamp)}</span>
-                <span className="truncate">TX: {event.tx_hash}</span>
-              </div>
-            </div>
-          </div>
-        ))}
+                </td>
+                <td className="py-2 px-3 text-xs text-gray-500">
+                  {formatTimestamp(event.timestamp)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       {events.length === 0 && (
@@ -178,6 +185,6 @@ export function MarginPoolEvents({ poolId }: MarginPoolEventsProps) {
           No events yet. Events will appear here as they occur.
         </div>
       )}
-    </Card>
+    </div>
   );
 }

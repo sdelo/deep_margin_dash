@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { ConnectButton, useCurrentAccount } from '@mysten/dapp-kit';
 import { toggleTheme, getTheme, type Theme } from '../utils/theme';
 import Logo from '../assets/depthlens-logo.svg';
 
@@ -9,6 +10,9 @@ interface AppHeaderProps {
 
 export function AppHeader({ activeTab, onTabChange }: AppHeaderProps) {
   const [theme, setThemeState] = useState<Theme>('dark');
+  // 👇 This is the "current account"
+  // It is `null` until a wallet connects.
+  const account = useCurrentAccount();
 
   useEffect(() => {
     setThemeState(getTheme());
@@ -23,8 +27,8 @@ export function AppHeader({ activeTab, onTabChange }: AppHeaderProps) {
     <header className="sticky top-0 z-50 border-b bg-transparent">
       <div className="mx-20 px-20">
         <div className="glass glass-highlight glass-e2 rounded-[28px] mt-3 mb-4 px-25">
-          <div className="flex h-14 items-center justify-left">
-            <div className="flex items-center gap-3 mr-20">
+          <div className="flex h-14 items-center justify-between">
+            <div className="flex items-center gap-3">
               <img src={Logo} alt="DepthLens" className="h-7 w-7" />
               <div className="flex flex-col">
                 <span className="text-sm font-semibold tracking-wide">DepthLens</span>
@@ -84,6 +88,19 @@ export function AppHeader({ activeTab, onTabChange }: AppHeaderProps) {
               >
                 Lending
               </button>
+            </div>
+
+            {/* Wallet Connection Section */}
+            <div className="flex items-center gap-3">
+              {/* Opens a modal listing detected wallets (Slush will show here if installed) */}
+              <ConnectButton />
+              
+              {/* After connecting, show the connected Sui address */}
+              {account && (
+                <code className="text-xs opacity-80 text-gray-400">
+                  {account.address}
+                </code>
+              )}
             </div>
             
           </div>

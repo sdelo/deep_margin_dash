@@ -70,63 +70,68 @@ export function DeepBookPoolsSection({ poolId }: DeepBookPoolsSectionProps) {
   };
 
   return (
-    <Card>
-      <CardHeader 
-        title="Linked DeepBook Pools" 
-        subtitle="Pools connected to this margin pool for trading"
-      />
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
         {linkedDeepBookPools.map((pool) => (
-          <div key={pool.id} className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <h4 className="font-medium text-gray-900">
-                  {getAssetSymbol(pool.base_asset_type)} / {getAssetSymbol(pool.quote_asset_type)}
-                </h4>
-                <p className="text-sm text-gray-500">Pool ID: {pool.id.slice(0, 8)}...</p>
+          <div key={pool.id} className="border border-gray-200 rounded-lg p-2 hover:border-blue-300 transition-colors">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                {/* Base Asset Icon */}
+                <div className="w-4 h-4 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-xs font-bold">
+                  {getAssetSymbol(pool.base_asset_type).charAt(0)}
+                </div>
+                {/* Quote Asset Icon */}
+                <div className="w-4 h-4 rounded-full bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center text-white text-xs font-bold">
+                  {getAssetSymbol(pool.quote_asset_type).charAt(0)}
+                </div>
+                <div>
+                  <h4 className="text-xs font-medium text-gray-900">
+                    {getAssetSymbol(pool.base_asset_type)} / {getAssetSymbol(pool.quote_asset_type)}
+                  </h4>
+                  <p className="text-xs text-gray-500">ID: {pool.id.slice(0, 4)}...</p>
+                </div>
               </div>
               <Badge tone={pool.pool_config.enabled ? "positive" : "neutral"}>
                 {pool.pool_config.enabled ? "Active" : "Inactive"}
               </Badge>
             </div>
 
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="space-y-1">
+              <div className="grid grid-cols-2 gap-1 text-xs">
                 <div>
-                  <p className="text-gray-500">Min Withdraw Ratio</p>
+                  <p className="text-gray-500">Min Withdraw</p>
                   <p className="font-medium text-gray-900">
                     {formatRiskRatio(pool.pool_config.risk_ratios.min_withdraw_risk_ratio)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-gray-500">Min Borrow Ratio</p>
+                  <p className="text-gray-500">Min Borrow</p>
                   <p className="font-medium text-gray-900">
                     {formatRiskRatio(pool.pool_config.risk_ratios.min_borrow_risk_ratio)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-gray-500">Liquidation Ratio</p>
+                  <p className="text-gray-500">Liquidation</p>
                   <p className="font-medium text-gray-900">
                     {formatRiskRatio(pool.pool_config.risk_ratios.liquidation_risk_ratio)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-gray-500">Target Liquidation</p>
+                  <p className="text-gray-500">Target</p>
                   <p className="font-medium text-gray-900">
                     {formatRiskRatio(pool.pool_config.risk_ratios.target_liquidation_risk_ratio)}
                   </p>
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-gray-100">
-                <div className="flex justify-between text-sm">
+              <div className="pt-1 border-t border-gray-100">
+                <div className="flex justify-between text-xs">
                   <span className="text-gray-500">User Reward</span>
                   <span className="font-medium text-green-600">
                     {formatPercentage(pool.pool_config.user_liquidation_reward)}
                   </span>
                 </div>
-                <div className="flex justify-between text-sm">
+                <div className="flex justify-between text-xs">
                   <span className="text-gray-500">Pool Reward</span>
                   <span className="font-medium text-blue-600">
                     {formatPercentage(pool.pool_config.pool_liquidation_reward)}
@@ -137,6 +142,6 @@ export function DeepBookPoolsSection({ poolId }: DeepBookPoolsSectionProps) {
           </div>
         ))}
       </div>
-    </Card>
+    </div>
   );
 }

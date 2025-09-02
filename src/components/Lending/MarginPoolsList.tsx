@@ -81,25 +81,33 @@ export function MarginPoolsList({ onPoolSelect, selectedPool, compact = false }:
   if (compact) {
     // Compact sidebar view
     return (
-      <div className="space-y-2">
+      <div className="space-y-1">
         {marginPools.map((pool) => (
           <div
             key={pool.id}
-            className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+            className={`p-2 rounded-lg border cursor-pointer transition-colors ${
               selectedPool?.id === pool.id
                 ? 'border-blue-500 bg-blue-50'
                 : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
             }`}
             onClick={() => onPoolSelect(pool)}
           >
-            <div className="flex items-center justify-between mb-1">
-              <span className="font-medium text-sm text-gray-900">{pool.currency_symbol}</span>
-              <Badge tone="positive" className="text-xs">
-                {formatInterestRate(pool.current_rate || '0')}
-              </Badge>
-            </div>
-            <div className="text-xs text-gray-500">
-              {formatUtilizationRate(pool.utilization_rate)} util
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {/* Crypto Icon */}
+                <div className="w-5 h-5 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-white text-xs font-bold">
+                  {pool.currency_symbol === 'SUI' ? 'S' : pool.currency_symbol === 'USDC' ? 'U' : 'C'}
+                </div>
+                <span className="font-medium text-xs text-gray-900">{pool.currency_symbol}</span>
+              </div>
+              <div className="text-right">
+                <div className="text-xs font-medium text-green-600">
+                  {formatInterestRate(pool.current_rate || '0')}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {formatUtilizationRate(pool.utilization_rate)} util
+                </div>
+              </div>
             </div>
           </div>
         ))}
