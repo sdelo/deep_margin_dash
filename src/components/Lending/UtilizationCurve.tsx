@@ -28,7 +28,7 @@ export function UtilizationCurve({ pool }: UtilizationCurveProps) {
   // Generate curve data points
   const generateCurveData = () => {
     const points = [];
-    for (let i = 0; i <= 100; i += 5) {
+    for (let i = 0; i <= 100; i += 2) {
       const utilization = i / 100;
       const rate = calculateInterestRate(utilization);
       points.push({
@@ -44,6 +44,10 @@ export function UtilizationCurve({ pool }: UtilizationCurveProps) {
   const currentUtilization = parseFloat(pool.utilization_rate) * 100;
   const currentRate = parseFloat(pool.current_rate || '0') * 100;
 
+  // Calculate max rate for Y-axis scaling
+  const maxRate = Math.max(...curveData.map(p => p.rate), currentRate);
+  const yAxisMax = Math.ceil(maxRate * 1.2); // Add 20% padding
+
   return (
     <div className="space-y-4">
       {/* Curve Labels */}
@@ -54,18 +58,37 @@ export function UtilizationCurve({ pool }: UtilizationCurveProps) {
       </div>
 
       {/* Curve Visualization */}
-      <div className="relative h-20 bg-gray-50 rounded-lg p-2">
-        {/* Grid lines */}
+      <div className="relative h-32 bg-gray-50 rounded-lg p-3">
+        {/* Grid lines - Horizontal (utilization) */}
         <div className="absolute inset-0 flex flex-col justify-between">
-          {[0, 50, 100].map((tick) => (
+          {[0, 25, 50, 75, 100].map((tick) => (
             <div key={tick} className="w-full h-px bg-gray-200" />
           ))}
         </div>
         
-        {/* Y-axis labels */}
+        {/* Grid lines - Vertical (interest rate) */}
+        <div className="absolute inset-0 flex justify-between">
+          {[0, 25, 50, 75, 100].map((tick) => (
+            <div key={tick} className="h-full w-px bg-gray-200" />
+          ))}
+        </div>
+        
+        {/* Y-axis labels (Interest Rate) */}
         <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-xs text-gray-500">
-          {[0, 50, 100].map((tick) => (
-            <span key={tick} className="transform -translate-y-1/2">
+          {[100, 75, 50, 25, 0].map((tick) => {
+            const rate = Math.round((tick / 100) * yAxisMax);
+            return (
+              <span key={tick} className="transform -translate-y-1/2 -translate-x-6">
+                {rate}%
+              </span>
+            );
+          })}
+        </div>
+
+        {/* X-axis labels (Utilization) */}
+        <div className="absolute bottom-0 left-0 w-full flex justify-between text-xs text-gray-500">
+          {[0, 25, 50, 75, 100].map((tick) => (
+            <span key={tick} className="transform translate-y-2">
               {tick}%
             </span>
           ))}
@@ -84,20 +107,20 @@ export function UtilizationCurve({ pool }: UtilizationCurveProps) {
           <path
             d={curveData.map((point, index) => {
               const x = point.utilization;
-              const y = 100 - Math.min(point.rate, 100); // Invert Y for SVG
+              const y = 100 - (point.rate / yAxisMax * 100); // Scale Y to fit in 100x100 viewBox
               return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
             }).join(' ')}
             stroke="url(#curveGradient)"
-            strokeWidth="3"
+            strokeWidth="2"
             fill="none"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
         </svg>
 
-        {/* Current utilization indicator */}
+        {/* Current utilization indicator (vertical line) */}
         <div 
-          className="absolute top-0 bottom-0 w-1 bg-blue-600 rounded-full"
+          className="absolute top-0 bottom-0 w-0.5 bg-blue-600 rounded-full"
           style={{ left: `${currentUtilization}%` }}
         />
         
@@ -106,15 +129,21 @@ export function UtilizationCurve({ pool }: UtilizationCurveProps) {
           className="absolute transform -translate-x-1/2 -translate-y-full"
           style={{ 
             left: `${currentUtilization}%`,
-            top: `${100 - Math.min(currentRate, 100)}%`
+            top: `${100 - (currentRate / yAxisMax * 100)}%`
           }}
         >
-          <div className="bg-blue-600 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+          <div className="bg-blue-600 text-white text-xs px-2 py-1 rounded whitespace-nowrap shadow-lg">
             {currentUtilization.toFixed(1)}% util
             <br />
             {currentRate.toFixed(2)}% rate
           </div>
         </div>
+
+        {/* Optimal utilization marker */}
+        <div 
+          className="absolute top-0 bottom-0 w-0.5 bg-orange-400 border-l-2 border-dashed border-orange-600"
+          style={{ left: `${parseFloat(pool.optimal_utilization) * 100}%` }}
+        />
       </div>
 
       {/* Curve explanation */}

@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
-import { Card, CardHeader } from '../ui/Card';
 import { Button } from '../ui/Button';
 import type { MarginPool } from '../../types/lending';
 
 interface SupplyWithdrawFormProps {
   pool: MarginPool;
+  selectedPools?: MarginPool[];
+  allocations?: Record<string, number>;
 }
 
-export function SupplyWithdrawForm({ pool }: SupplyWithdrawFormProps) {
+export function SupplyWithdrawForm({ pool, selectedPools, allocations }: SupplyWithdrawFormProps) {
   const [action, setAction] = useState<'supply' | 'withdraw'>('supply');
   const [amount, setAmount] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  
+  const isMultiPoolMode = selectedPools && selectedPools.length > 1;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,14 +22,35 @@ export function SupplyWithdrawForm({ pool }: SupplyWithdrawFormProps) {
     setIsLoading(true);
     
     try {
-      // Mock transaction - replace with actual blockchain interaction
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      if (isMultiPoolMode && allocations) {
+        // Multi-pool distribution
+        const transactions = selectedPools?.map((selectedPool) => {
+          const allocation = allocations[selectedPool.id] || 0;
+          const distributedAmount = (parseFloat(amount) * allocation) / 100;
+          return {
+            poolId: selectedPool.id,
+            poolName: selectedPool.name,
+            amount: distributedAmount,
+            currency: selectedPool.currency_symbol
+          };
+        }) || [];
+        
+        console.log(`${action === 'supply' ? 'Supply' : 'Withdraw'} distribution:`, transactions);
+        
+        // Mock: Execute multiple transactions
+        for (const tx of transactions) {
+          await new Promise(resolve => setTimeout(resolve, 500)); // Simulate individual tx
+          console.log(`${action === 'supply' ? 'Supplied' : 'Withdrew'} ${tx.amount} ${tx.currency} to ${tx.poolName}`);
+        }
+      } else {
+        // Single pool transaction
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        console.log(`${action === 'supply' ? 'Supplied' : 'Withdrew'} ${amount} ${pool.currency_symbol}`);
+      }
       
       // Reset form
       setAmount('');
       
-      // Show success message (you can add a toast notification here)
-      console.log(`${action === 'supply' ? 'Supplied' : 'Withdrew'} ${amount} ${pool.currency_symbol}`);
     } catch (error) {
       console.error('Transaction failed:', error);
     } finally {
@@ -69,14 +93,9 @@ export function SupplyWithdrawForm({ pool }: SupplyWithdrawFormProps) {
   };
 
   return (
-    <Card>
-      <CardHeader 
-        title="Supply / Withdraw" 
-        subtitle={`Manage your position in ${pool.name}`}
-      />
-      
+    <div className="space-y-6">
       {/* Action Toggle */}
-      <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg mb-6">
+      <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
         <button
           onClick={() => setAction('supply')}
           className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
@@ -100,7 +119,7 @@ export function SupplyWithdrawForm({ pool }: SupplyWithdrawFormProps) {
       </div>
 
       {/* Pool Stats */}
-      <div className="grid grid-cols-2 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+      <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
         <div>
           <p className="text-sm text-gray-500">Current Rate</p>
           <p className="text-lg font-semibold text-green-600">
@@ -145,6 +164,57 @@ export function SupplyWithdrawForm({ pool }: SupplyWithdrawFormProps) {
           </p>
         </div>
 
+        {/* Quick Action Buttons */}
+        <div className="flex gap-2">
+          {action === 'withdraw' && (
+            <button
+              type="button"
+              onClick={() => setAmount(getMaxAmount())}
+              className="flex-1 px-3 py-2 text-sm bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors"
+            >
+              Withdraw All
+            </button>
+          )}
+          {action === 'supply' && (
+            <button
+              type="button"
+              onClick={() => {
+                // Mock: Add to existing position (could be a percentage of current position)
+                const existingPosition = '500'; // Mock existing position
+                setAmount(existingPosition);
+              }}
+              className="flex-1 px-3 py-2 text-sm bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition-colors"
+            >
+              Add to Existing Position
+            </button>
+          )}
+        </div>
+
+        {/* Multi-Pool Distribution Preview */}
+        {isMultiPoolMode && amount && parseFloat(amount) > 0 && (
+          <div className="p-3 bg-blue-50 rounded-lg">
+            <h4 className="text-sm font-medium text-gray-900 mb-2">
+              {action === 'supply' ? 'Supply' : 'Withdraw'} Distribution Across Pools:
+            </h4>
+            <div className="space-y-2">
+              {selectedPools?.map((selectedPool) => {
+                const allocation = allocations?.[selectedPool.id] || 0;
+                const distributedAmount = (parseFloat(amount) * allocation) / 100;
+                return (
+                  <div key={selectedPool.id} className="flex justify-between text-sm">
+                    <span className="text-gray-600">
+                      {selectedPool.currency_symbol} ({allocation.toFixed(1)}%)
+                    </span>
+                    <span className="font-medium text-gray-900">
+                      {distributedAmount.toFixed(2)} {selectedPool.currency_symbol}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Estimated Shares */}
         <div className="p-3 bg-blue-50 rounded-lg">
           <div className="flex justify-between text-sm">
@@ -168,13 +238,15 @@ export function SupplyWithdrawForm({ pool }: SupplyWithdrawFormProps) {
               Processing...
             </div>
           ) : (
-            `${action === 'supply' ? 'Supply' : 'Withdraw'} ${pool.currency_symbol}`
+            isMultiPoolMode 
+              ? `${action === 'supply' ? 'Supply' : 'Withdraw'} Across ${selectedPools?.length} Pools`
+              : `${action === 'supply' ? 'Supply' : 'Withdraw'} ${pool.currency_symbol}`
           )}
         </Button>
       </form>
 
       {/* Info Box */}
-      <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+      <div className="p-3 bg-gray-50 rounded-lg">
         <h4 className="text-sm font-medium text-gray-900 mb-2">Important Notes:</h4>
         <ul className="text-xs text-gray-600 space-y-1">
           <li>• Interest is earned continuously on supplied assets</li>
@@ -183,6 +255,6 @@ export function SupplyWithdrawForm({ pool }: SupplyWithdrawFormProps) {
           <li>• Ensure you have sufficient balance for transactions</li>
         </ul>
       </div>
-    </Card>
+    </div>
   );
 }

@@ -13,7 +13,8 @@ export function EnhancedLendingPage() {
   const [activeTab, setActiveTab] = useState<'list' | 'detail'>('detail');
   const [selectedPool, setSelectedPool] = useState<MarginPool | null>(null);
   const [selectedPools, setSelectedPools] = useState<MarginPool[]>([]);
-  const [showCheckboxes, setShowCheckboxes] = useState(false);
+  const [allocations, setAllocations] = useState<Record<string, number>>({});
+  const [positionData, setPositionData] = useState<Record<string, any>>({});
 
   // Mock data - replace with actual data fetching
   const marginPools: MarginPool[] = [
@@ -99,7 +100,7 @@ export function EnhancedLendingPage() {
   const handlePoolSelect = (pool: MarginPool) => {
     setSelectedPool(pool);
     // If we're in multi-pool mode, also update selected pools
-    if (showCheckboxes) {
+    if (selectedPools.length > 0) {
       if (!selectedPools.find(p => p.id === pool.id)) {
         setSelectedPools([...selectedPools, pool]);
       }
@@ -128,6 +129,16 @@ export function EnhancedLendingPage() {
   // Handle allocation changes
   const handleAllocationChange = (poolId: string, allocation: number) => {
     console.log(`Pool ${poolId} allocation changed to ${allocation}%`);
+    setAllocations(prev => ({
+      ...prev,
+      [poolId]: allocation
+    }));
+  };
+
+  // Handle position data changes from CombinedPoolView
+  const handlePositionDataChange = (positions: Record<string, any>) => {
+    console.log('EnhancedLendingPage - received position data:', positions);
+    setPositionData(positions);
   };
 
   // Handle batch supply
@@ -148,21 +159,27 @@ export function EnhancedLendingPage() {
     // TODO: Implement rebalancing logic
   };
 
-  // Toggle multi-pool mode
-  const toggleMultiPoolMode = () => {
-    setShowCheckboxes(!showCheckboxes);
-    if (!showCheckboxes) {
-      // Entering multi-pool mode, select current pool if exists
-      if (selectedPool && !selectedPools.find(p => p.id === selectedPool.id)) {
-        setSelectedPools([selectedPool]);
-      }
-    } else {
-      // Exiting multi-pool mode, clear selections
-      setSelectedPools([]);
-    }
+  // Select all user's active pools - show 2 pools as requested
+  const selectAllActivePools = () => {
+    // Select first 2 pools to show 2 positions as requested
+    const pools = [marginPools[0], marginPools[1]];
+    setSelectedPools(pools);
+    
+    // Initialize equal allocations
+    const equalAllocation = 100 / pools.length;
+    const initialAllocations: Record<string, number> = {};
+    pools.forEach(pool => {
+      initialAllocations[pool.id] = equalAllocation;
+    });
+    setAllocations(initialAllocations);
   };
 
-  const isMultiPoolMode = showCheckboxes && selectedPools.length > 0;
+  const isMultiPoolMode = selectedPools.length > 1;
+
+  // Calculate total capital for multi-pool view
+  const totalCapital = selectedPools.reduce((total, pool) => {
+    return total + parseFloat(pool.total_supply) / 1e9;
+  }, 0);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -192,30 +209,17 @@ export function EnhancedLendingPage() {
             </button>
           </div>
 
-          {/* Multi-Pool Mode Toggle */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={toggleMultiPoolMode}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                showCheckboxes
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              {showCheckboxes ? 'Multi-Pool Mode' : 'Single Pool Mode'}
-            </button>
-            
-            {showCheckboxes && (
-              <div className="text-sm text-gray-600">
-                {selectedPools.length} pool{selectedPools.length !== 1 ? 's' : ''} selected
-              </div>
-            )}
-          </div>
+          {/* Selection Status */}
+          {selectedPools.length > 0 && (
+            <div className="text-sm text-gray-600">
+              {selectedPools.length} pool{selectedPools.length !== 1 ? 's' : ''} selected
+            </div>
+          )}
         </div>
       </div>
 
       {activeTab === 'list' ? (
-        /* List View - Full width table */
+        /* List View - Full width cards */
         <div className="px-4 py-6">
           <div className="max-w-7xl mx-auto">
             <h1 className="text-3xl font-bold text-gray-900 mb-6">Margin Pools</h1>
@@ -226,7 +230,7 @@ export function EnhancedLendingPage() {
               onPoolToggle={handlePoolToggle}
               onSelectAll={handleSelectAll}
               onClearAll={handleClearAll}
-              showCheckboxes={showCheckboxes}
+              showCheckboxes={false}
             />
           </div>
         </div>
@@ -255,7 +259,7 @@ export function EnhancedLendingPage() {
                 onSelectAll={handleSelectAll}
                 onClearAll={handleClearAll}
                 compact={true}
-                showCheckboxes={showCheckboxes}
+                showCheckboxes={true}
               />
             </div>
           </div>
@@ -263,22 +267,26 @@ export function EnhancedLendingPage() {
           {/* Central Content Area */}
           <div className="flex-1 bg-gray-50 overflow-y-auto">
             <div className="px-4 py-6 h-full flex flex-col">
-              {isMultiPoolMode ? (
-                /* Combined Pool View */
-                <CombinedPoolView
-                  selectedPools={selectedPools}
-                  onAllocationChange={handleAllocationChange}
-                  onBatchSupply={handleBatchSupply}
-                  onBatchWithdraw={handleBatchWithdraw}
-                  onRebalance={handleRebalance}
-                />
-              ) : (
-                /* Single Pool View */
-                <>
-                  {/* Top Row: Margin Pool Details + Supply/Withdraw side by side */}
-                  <div className="flex gap-6 mb-2" style={{ height: '40%' }}>
-                    {/* Margin Pool Details - Left side (60%) */}
-                    <div className="w-3/5 bg-white rounded-lg shadow-sm p-6 overflow-y-auto">
+              {/* Top Row: Left side (Margin Pool Details OR Multi-Pool View) + Supply/Withdraw side by side */}
+              <div className="flex gap-6 mb-2" style={{ height: '60%' }}>
+                {/* Left side (60%) - Either Margin Pool Details OR Multi-Pool View */}
+                <div className="w-3/5 overflow-y-auto">
+                  {isMultiPoolMode ? (
+                    /* Multi-Pool View - replaces only the Margin Pool Details section */
+                    <CombinedPoolView
+                      selectedPools={selectedPools}
+                      totalCapital={totalCapital}
+                      onAllocationChange={handleAllocationChange}
+                      onBatchSupply={handleBatchSupply}
+                      onBatchWithdraw={handleBatchWithdraw}
+                      onRebalance={handleRebalance}
+                      allocations={allocations}
+                      setAllocations={setAllocations}
+                      onPositionDataChange={handlePositionDataChange}
+                    />
+                  ) : (
+                    /* Single Pool View - Margin Pool Details */
+                    <div className="bg-white rounded-lg shadow-sm p-6 h-full">
                       <h2 className="text-xl font-bold text-gray-900 mb-4">Margin Pool Details</h2>
                       {selectedPool ? (
                         <div className="space-y-4">
@@ -350,33 +358,39 @@ export function EnhancedLendingPage() {
                         <p className="text-gray-500">Select a pool to view details</p>
                       )}
                     </div>
+                  )}
+                </div>
 
-                    {/* Supply/Withdraw Section - Right side (larger) */}
-                    <div className="flex-1 bg-white rounded-lg shadow-sm p-6 overflow-y-auto">
-                      <h2 className="text-xl font-bold text-gray-900 mb-4">Supply / Withdraw</h2>
-                      {selectedPool && (
-                        <SupplyWithdrawForm pool={selectedPool} />
-                      )}
-                    </div>
-                  </div>
+                {/* Supply/Withdraw Section - Right side (always visible) */}
+                <div className="flex-1 bg-white rounded-lg shadow-sm p-6 overflow-y-auto">
+                  <h2 className="text-xl font-bold text-gray-900 mb-4">Supply / Withdraw</h2>
+                  {selectedPool && (
+                    <SupplyWithdrawForm 
+                      pool={selectedPool} 
+                      selectedPools={isMultiPoolMode ? selectedPools : undefined}
+                      allocations={isMultiPoolMode ? allocations : undefined}
+                    />
+                  )}
+                </div>
+              </div>
 
-                  {/* Pools Linked to Margin Pool - 15% height */}
-                  <div className="bg-white rounded-lg shadow-sm p-3 mb-2 flex-shrink-0 overflow-y-auto" style={{ height: '15%' }}>
-                    <h2 className="text-sm font-bold text-gray-900 mb-2">Linked DeepBook Pools</h2>
-                    {selectedPool && (
-                      <DeepBookPoolsSection poolId={selectedPool.id} />
-                    )}
-                  </div>
+              {/* Linked DeepBook Pools - Same width as left side */}
+              <div className="w-3/5 bg-white rounded-lg shadow-sm p-3 mb-2 flex-shrink-0 overflow-y-auto" style={{ height: '15%' }}>
+                <h2 className="text-sm font-bold text-gray-900 mb-2">
+                  Linked DeepBook Pools ({selectedPool?.allowed_deepbook_pools.length || 0} pools)
+                </h2>
+                {selectedPool && (
+                  <DeepBookPoolsSection poolId={selectedPool.id} />
+                )}
+              </div>
 
-                  {/* All Margin Pool Events - remaining height */}
-                  <div className="bg-white rounded-lg shadow-sm p-3 flex-1">
-                    <h2 className="text-sm font-bold text-gray-900 mb-2">Margin Pool Events</h2>
-                    {selectedPool && (
-                      <MarginPoolEvents poolId={selectedPool.id} />
-                    )}
-                  </div>
-                </>
-              )}
+              {/* All Margin Pool Events - remaining height */}
+              <div className="bg-white rounded-lg shadow-sm p-3 flex-1">
+                <h2 className="text-sm font-bold text-gray-900 mb-2">Margin Pool Events</h2>
+                {selectedPool && (
+                  <MarginPoolEvents poolId={selectedPool.id} />
+                )}
+              </div>
             </div>
           </div>
 
@@ -385,9 +399,26 @@ export function EnhancedLendingPage() {
             <div className="p-3 space-y-4">
               {/* User Position Summary */}
               <div>
-                <h3 className="text-base font-semibold text-gray-900 mb-3">Your Position</h3>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-base font-semibold text-gray-900">Your Position</h3>
+                  <button
+                    onClick={selectAllActivePools}
+                    className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                  >
+                    Select All Active
+                  </button>
+                </div>
                 {selectedPool && (
-                  <UserPositionSummary pool={selectedPool} />
+                  <UserPositionSummary 
+                    pool={selectedPool} 
+                    positionData={positionData}
+                  />
+                )}
+                {/* Debug info */}
+                {selectedPool && (
+                  <div className="text-xs text-gray-400 mt-2">
+                    Debug: all positionData: {JSON.stringify(positionData)}
+                  </div>
                 )}
               </div>
 

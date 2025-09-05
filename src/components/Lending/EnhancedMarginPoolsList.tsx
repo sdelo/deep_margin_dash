@@ -42,6 +42,11 @@ export function EnhancedMarginPoolsList({
     return `${num.toFixed(1)}M`;
   };
 
+  const formatUSD = (value: string) => {
+    const num = parseFloat(value) / 1e9;
+    return `$${num.toFixed(2)}`;
+  };
+
   const isPoolSelected = (pool: MarginPool) => {
     return selectedPools.some(selected => selected.id === pool.id);
   };
@@ -74,7 +79,7 @@ export function EnhancedMarginPoolsList({
           </div>
         )}
 
-        {/* Pool List */}
+        {/* Pool Cards */}
         {pools.map((pool) => (
           <div
             key={pool.id}
@@ -120,136 +125,121 @@ export function EnhancedMarginPoolsList({
     );
   }
 
-  // Full table view
+  // Full cards view (replaces table) - NO MULTISELECT on list page
   return (
-    <Card>
-      <CardHeader title="Margin Pools" />
-      
-      {/* Selection Controls */}
-      {showCheckboxes && (
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
-          <span className="text-sm font-medium text-gray-700">
-            {selectedCount} pool{selectedCount !== 1 ? 's' : ''} selected
-          </span>
-          <div className="flex gap-2">
-            <button
-              onClick={onSelectAll}
-              className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-md text-sm font-medium hover:bg-blue-200 transition-colors"
-            >
-              Select All
-            </button>
-            <button
-              onClick={onClearAll}
-              className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-200 transition-colors"
-            >
-              Clear All
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              {showCheckboxes && (
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  <input
-                    type="checkbox"
-                    checked={selectedCount === pools.length && pools.length > 0}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        onSelectAll();
-                      } else {
-                        onClearAll();
-                      }
-                    }}
-                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                  />
-                </th>
-              )}
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Pool
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                DeepBook Pools
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Utilization
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Current Rate
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Total Supply
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {pools.map((pool) => (
-              <tr 
-                key={pool.id}
-                className={`hover:bg-gray-50 cursor-pointer transition-colors ${
-                  isPoolSelected(pool) ? 'bg-blue-50 border-blue-200' : ''
-                }`}
-                onClick={() => onPoolSelect(pool)}
-              >
-                {showCheckboxes && (
-                  <td className="px-6 py-4">
-                    <input
-                      type="checkbox"
-                      checked={isPoolSelected(pool)}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        onPoolToggle(pool, e.target.checked);
-                      }}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                    />
-                  </td>
-                )}
-                <td className="py-4 px-6">
-                  <div>
-                    <div className="font-medium text-gray-900">{pool.name}</div>
-                    <div className="text-sm text-gray-500">{pool.currency_symbol}</div>
-                  </div>
-                </td>
-                <td className="py-4 px-6">
-                  <div className="flex flex-wrap gap-1">
-                    {pool.allowed_deepbook_pools.map((deepbookPool, index) => (
-                      <Badge key={index} tone="info" className="text-xs">
-                        {deepbookPool.slice(0, 8)}...
-                      </Badge>
-                    ))}
-                  </div>
-                </td>
-                <td className="py-4 px-6">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-gray-900">
-                      {formatUtilizationRate(pool.utilization_rate)}
-                    </span>
-                    <div className="w-16 bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${parseFloat(pool.utilization_rate) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                </td>
-                <td className="py-4 px-6">
-                  <span className="font-medium text-green-600">
+    <div className="space-y-6">
+      {/* Pool Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {pools.map((pool) => (
+          <div
+            key={pool.id}
+            className="bg-white rounded-lg border-2 border-gray-200 cursor-pointer transition-all duration-200 hover:border-blue-300 hover:shadow-lg"
+            onClick={() => onPoolSelect(pool)}
+          >
+            {/* Pool Header */}
+            <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">{pool.name}</h3>
+                  <p className="text-sm text-gray-500">{pool.currency_symbol}</p>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-green-600">
                     {formatInterestRate(pool.current_rate || '0')}
-                  </span>
-                </td>
-                <td className="py-4 px-6">
-                  <span className="font-medium text-gray-900">
+                  </div>
+                  <div className="text-sm text-gray-500">Current Rate</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Pool Metrics */}
+            <div className="p-4">
+              {/* Key Metrics Grid */}
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <p className="text-sm text-gray-500">Utilization</p>
+                  <p className="text-lg font-semibold text-gray-900">
+                    {formatUtilizationRate(pool.utilization_rate)}
+                  </p>
+                  <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${parseFloat(pool.utilization_rate) * 100}%` }}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Total Supply</p>
+                  <p className="text-lg font-semibold text-gray-900">
                     {formatLargeNumber(pool.total_supply)} {pool.currency_symbol}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Unique Positions</p>
+                  <p className="text-lg font-semibold text-gray-900">{pool.unique_positions}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Protocol Spread</p>
+                  <p className="text-lg font-semibold text-gray-900">
+                    {(parseFloat(pool.protocol_spread) * 100).toFixed(2)}%
+                  </p>
+                </div>
+              </div>
+
+              {/* Additional Rich Metrics */}
+              <div className="space-y-3 mb-4">
+                <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                  <span className="text-sm text-gray-600">Protocol Profit</span>
+                  <span className="text-sm font-semibold text-blue-600">
+                    {formatUSD(pool.protocol_profit)}
                   </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </div>
+                
+                <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                  <span className="text-sm text-gray-600">Vault Value</span>
+                  <span className="text-sm font-semibold text-green-600">
+                    {formatUSD(pool.vault_value)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
+                  <span className="text-sm text-gray-600">Daily Interest Cost</span>
+                  <span className="text-sm font-semibold text-purple-600">
+                    {formatUSD(pool.daily_interest_cost_usd)}
+                  </span>
+                </div>
+              </div>
+
+              {/* DeepBook Pools Count */}
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <span className="text-sm text-gray-600">Linked DeepBook Pools</span>
+                <Badge tone="info" className="text-sm">
+                  {pool.allowed_deepbook_pools.length} pools
+                </Badge>
+              </div>
+
+              {/* Risk Indicators */}
+              <div className="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-yellow-800">Risk Profile</span>
+                  <span className="text-xs text-yellow-600">
+                    {parseFloat(pool.utilization_rate) > 0.8 ? 'High' : 
+                     parseFloat(pool.utilization_rate) > 0.6 ? 'Medium' : 'Low'}
+                  </span>
+                </div>
+                <div className="text-xs text-yellow-700">
+                  {parseFloat(pool.utilization_rate) > 0.8 
+                    ? 'High utilization - consider supply limits'
+                    : parseFloat(pool.utilization_rate) > 0.6
+                    ? 'Moderate utilization - good supply opportunity'
+                    : 'Low utilization - stable rates expected'
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
-    </Card>
+    </div>
   );
 }
